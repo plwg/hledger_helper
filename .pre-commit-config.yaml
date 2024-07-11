@@ -1,0 +1,27 @@
+# pre-commit install
+# pre-commit autoupdate
+# pre-commit run --all-files
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.6.0
+  hooks:
+  - id: check-ast
+  - id: check-toml
+  - id: check-yaml
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  # Ruff version.
+  rev: v0.3.5
+  hooks:
+    # Run the linter.
+    - id: ruff
+      types_or: [ python, pyi, jupyter ]
+      args: [ --fix ]
+    # Run the formatter.
+    - id: ruff-format
+      types_or: [ python, pyi, jupyter ]
+- repo: https://github.com/kynan/nbstripout
+  rev: 0.7.1
+  hooks:
+    - id: nbstripout
+
+exclude: 'inputs/.*|outputs/.*'
