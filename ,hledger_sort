@@ -1,0 +1,14 @@
+#!/bin/bash
+
+LEDGER_FILE_PATH=~/finance/my.ledger
+LEDGER_HEADER_FILE_PATH=~/finance/my.ledger.header
+
+# Generate the ledger content
+hledger print -x -E > temp_ledger
+
+cat temp_ledger > "$LEDGER_FILE_PATH"
+
+# Prepend the header file
+echo -e "$(cat "$LEDGER_HEADER_FILE_PATH")\n$(cat "$LEDGER_FILE_PATH")" > "$LEDGER_FILE_PATH"
+
+rm temp_ledger
