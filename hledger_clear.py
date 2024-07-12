@@ -1,10 +1,111 @@
+# TODO: add check to guard against corruption
 import re
 import shutil
+from enum import Enum
 from pathlib import Path
+from pprint import pprint
+
+line_type = Enum(
+    "Type",
+    ["CLEARED", "UNCLEARED_HEAD", "UNCLEARED_BODY", "GENERATED_COMMENTS", "DELETE"],
+)
+search_string_type = Enum("Type", ["ALL", "QUIT"])
+tx_decision_type = Enum("Type", ["YES", "NO", "QUIT"])
+
+
+def get_tx_decision():
+    try:
+        user_input = input("Clear Transaction (Y/n/q): ")
+
+        if user_input.lower() in {"quit", "q"}:
+            return tx_decision_type.QUIT
+        elif user_input.lower() in {"", "y", "yes"}:
+            return tx_decision_type.YES
+        else:
+            return tx_decision_type.NO
+
+    except KeyboardInterrupt:
+        print("Interrupted")
+        print("Bye!")
+        return tx_decision_type.QUIT
+
+    except EOFError:
+        print("Interrupted")
+        print("Bye!")
+        return tx_decision_type.QUIT
+
+
+def get_regex_search_string():
+    try:
+        search_string = input(
+            "Regex for filtering transaction (leave blank for no filter): "
+        )
+
+        if search_string.lower() in {"quit", "q"}:
+            return search_string_type.QUIT
+        elif search_string == "":
+            return search_string_type.ALL
+        else:
+            return search_string
+
+    except KeyboardInterrupt:
+        print("Interrupted")
+        print("Bye!")
+        return search_string_type.QUIT
+
+    except EOFError:
+        print("Interrupted")
+        print("Bye!")
+        return search_string_type.QUIT
+
+
+def count_uncleared(lines_status):
+    return sum([1 for k, v in lines_status.items() if v == line_type.UNCLEARED_HEAD])
+
+
+def initialize_line_status(n):
+    return {i: line_type.CLEARED for i in range(1, n + 1)}
+
+
+def update_lines_status(lines_status, lines):
+    for line_number in lines_status.keys():
+        line = lines[line_number - 1]
+
+        if re.search(r"^\d\d\d\d-\d\d-\d\d", line) and not re.search(
+            r"^\d\d\d\d-\d\d-\d\d \* ", line
+        ):
+            lines_status[line_number] = line_type.UNCLEARED_HEAD
+
+        elif (
+            line_number > 1
+            and lines_status[line_number - 1] == line_type.UNCLEARED_HEAD
+            and line.strip().startswith("; generated-transaction:")
+        ):
+            lines_status[line_number] = line_type.GENERATED_COMMENTS
+
+        elif (
+            line_number > 1
+            and lines_status[line_number - 1]
+            in {line_type.UNCLEARED_HEAD, line_type.UNCLEARED_BODY}
+            and line.startswith("    ")
+        ):
+            lines_status[line_number] = line_type.UNCLEARED_BODY
+
+        elif (
+            line_number > 2
+            and lines_status[line_number - 2] == line_type.UNCLEARED_HEAD
+            and lines_status[line_number - 1] == line_type.GENERATED_COMMENTS
+        ):
+            lines_status[line_number] = line_type.UNCLEARED_BODY
+
+        else:
+            lines_status[line_number] = line_type.CLEARED
+
+    return lines_status
 
 
 def main():
-    file_path_str = "~/finance/my.ledger"
+    file_path_str = "./my.ledger"
     bak_file_path_str = file_path_str + ".bak"
 
     file_path = Path(file_path_str).expanduser()
@@ -32,139 +133,73 @@ def main():
     print("Type 'q', 'quit', CTRL+C, or CTRL+D to quit.")
     print("=============================================")
 
-    aborted = False
-    uncleared_counter = 0
-    pass_done = 0
+    with open(file_path, "r") as f:
+        lines = f.readlines()
+
+    lines_status = initialize_line_status(len(lines))
 
     while True:
-        if pass_done > 0:
-            cleared_counter = 0
+        update_lines_status(lines_status, lines)
 
-            try:
-                search_string = input(
-                    "Regex for filtering transaction (leave blank for no filter): "
-                )
+        uncleared_count = count_uncleared(lines_status)
 
-                if search_string.lower() in {"quit", "q"}:
-                    aborted = True
-
-                    break
-            except KeyboardInterrupt:
-                print("Interrupted")
-                print("Bye!")
-                break
-            except EOFError:
-                print("Interrupted")
-                print("Bye!")
-                break
-
-        else:
-            search_string = ""
-
-        with open(file_path, "r") as f:
-            lines = f.readlines()
-
-        encountered_first_posting = False
-
-        with open(file_path, "w", buffering=1) as f:
-            for index, line in enumerate(lines):
-                encountered_first_posting = re.search(r"^\d\d\d\d-\d\d-\d\d.*", line)
-
-                if encountered_first_posting:
-                    break
-                else:
-                    f.write(line)
-
-            first_posting_index = index
-
-            for index, line in enumerate(lines[index:], start=first_posting_index):
-                if aborted:
-                    f.write(line)
-
-                elif re.search(r"^\d\d\d\d-\d\d-\d\d", line) and not re.search(
-                    r"^\d\d\d\d-\d\d-\d\d \* ", line
-                ):
-                    unclear_index = index
-
-                    if pass_done == 0:
-                        uncleared_counter += 1
-
-                    if pass_done > 0:
-                        unclear_tx = []
-
-                        unclear_tx.append(lines[unclear_index])
-
-                        for line in lines[unclear_index + 1 :]:
-                            if line.startswith("    "):
-                                unclear_tx.append(line)
-
-                            else:
-                                break
-
-                        tx_string = "".join(unclear_tx)
-
-                        if (
-                            re.search(search_string, tx_string, flags=re.I)
-                            or search_string == ""
-                        ):
-                            print(tx_string)
-
-                            try:
-                                user_descision = input(
-                                    "Clear this transaction? (Y/n/q): "
-                                )
-
-                                if user_descision.lower() in {"y", "yes", ""}:
-                                    lines[unclear_index] = re.sub(
-                                        r"^(\d\d\d\d-\d\d-\d\d) ",
-                                        r"\1 * ",
-                                        lines[unclear_index],
-                                    )
-
-                                    uncleared_counter -= 1
-                                    cleared_counter += 1
-
-                                elif user_descision.lower() in {"q", "quit"}:
-                                    aborted = True
-
-                            except KeyboardInterrupt:
-                                aborted = True
-                                print("")
-
-                            except EOFError:
-                                aborted = True
-                                print("")
-
-                    f.write(lines[unclear_index])
-
-                elif re.search(
-                    r"^\d\d\d\d-\d\d-\d\d \* ", lines[index - 1]
-                ) and line.strip().startswith("; generated-transaction:"):
-                    pass
-
-                else:
-                    f.write(line)
-
-        if uncleared_counter == 0:
-            if pass_done > 0:
-                print(f"{cleared_counter} transaction(s) cleared.")
-
-            print("No more uncleared transaction remaining! Bye!")
-            break
-
-        elif aborted:
-            print("Aborted! Bye!")
+        if uncleared_count == 0:
+            print("All cleared. Bye!")
             break
 
         else:
-            if pass_done > 0:
-                print(f"{cleared_counter} transaction(s) cleared.")
+            print(f"{uncleared_count} uncleared transaction left.")
 
-            print(f"{uncleared_counter} uncleared transaction(s) remaining.")
-            pass_done += 1
+        search_string = get_regex_search_string()
 
+        if search_string == search_string_type.QUIT:
+            break
 
-# TODO: add check to guard against corruption
+        uncleared_txs = [
+            [k] for k, v in lines_status.items() if v == line_type.UNCLEARED_HEAD
+        ]
+
+        tx_text = {}
+
+        for tx in uncleared_txs:
+            text = []
+
+            header = tx[0]
+
+            text.append(lines[header - 1])
+
+            ptr = header + 1
+
+            while lines_status.get(ptr) in {
+                line_type.GENERATED_COMMENTS,
+                line_type.UNCLEARED_BODY,
+            }:
+                tx.append(lines_status[ptr])
+                text.append(lines[ptr - 1])
+
+                ptr += 1
+
+            tx_text[header] = "".join(text)
+
+        pprint(uncleared_txs)
+        pprint(tx_text)
+
+        if search_string != search_string_type.ALL:
+            uncleared_txs = [
+                tx
+                for tx in uncleared_txs
+                if re.search(search_string, tx_text[tx[0]], flags=re.I)
+            ]
+
+            tx_text = {
+                k: v
+                for k, v in tx_text.items()
+                if re.search(search_string, v, flags=re.I)
+            }
+
+        pprint(uncleared_txs)
+        pprint(tx_text)
+
 
 if __name__ == "__main__":
     main()
