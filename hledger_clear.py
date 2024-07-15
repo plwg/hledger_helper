@@ -93,7 +93,7 @@ def update_line_status(lines):
 
 
 def main():
-    file_path_str = "./my.ledger"
+    file_path_str = "~/finance/my.ledger"
     bak_file_path_str = file_path_str + ".bak"
 
     file_path = Path(file_path_str).expanduser()
@@ -121,12 +121,10 @@ def main():
     print("Type 'q', 'quit', CTRL+C, or CTRL+D to quit.")
     print("=============================================")
 
-    while True:
-        with open(file_path, "r") as f:
-            lines = f.readlines()
-
+    with open(file_path, "r") as f:
+        lines = f.readlines()
         lines = {index: line for index, line in enumerate(lines)}
-
+    while True:
         line_status = update_line_status(lines)
 
         uncleared_count = count_uncleared(line_status)
