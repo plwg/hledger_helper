@@ -3,14 +3,13 @@ import re
 import shutil
 from enum import Enum
 from pathlib import Path
-from pprint import pprint
 
 line_type = Enum(
     "Type",
-    ["CLEARED", "UNCLEARED_HEAD", "UNCLEARED_BODY", "GENERATED_COMMENTS", "DELETE"],
+    ["CLEARED", "UNCLEARED_HEAD", "UNCLEARED_BODY", "GENERATED_COMMENTS"],
 )
-search_string_type = Enum("Type", ["ALL", "QUIT"])
-tx_decision_type = Enum("Type", ["YES", "NO", "QUIT"])
+search_string_type = Enum("Type", ["ALL"])
+tx_decision_type = Enum("Type", ["YES", "NO"])
 
 
 def get_tx_decision():
@@ -18,21 +17,17 @@ def get_tx_decision():
         user_input = input("Clear Transaction (Y/n/q): ")
 
         if user_input.lower() in {"quit", "q"}:
-            return tx_decision_type.QUIT
+            print("Bye!")
+            exit()
         elif user_input.lower() in {"", "y", "yes"}:
             return tx_decision_type.YES
-        else:
+        elif user_input.lower() in {"n", "no"}:
             return tx_decision_type.NO
 
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, EOFError):
         print("Interrupted")
         print("Bye!")
-        return tx_decision_type.QUIT
-
-    except EOFError:
-        print("Interrupted")
-        print("Bye!")
-        return tx_decision_type.QUIT
+        exit()
 
 
 def get_regex_search_string():
@@ -42,66 +37,59 @@ def get_regex_search_string():
         )
 
         if search_string.lower() in {"quit", "q"}:
-            return search_string_type.QUIT
+            print("Bye!")
+            exit()
         elif search_string == "":
             return search_string_type.ALL
         else:
             return search_string
-
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, EOFError):
         print("Interrupted")
         print("Bye!")
-        return search_string_type.QUIT
-
-    except EOFError:
-        print("Interrupted")
-        print("Bye!")
-        return search_string_type.QUIT
+        exit()
 
 
-def count_uncleared(lines_status):
-    return sum([1 for k, v in lines_status.items() if v == line_type.UNCLEARED_HEAD])
+def count_uncleared(line_status):
+    return sum([1 for v in line_status.values() if v == line_type.UNCLEARED_HEAD])
 
 
-def initialize_line_status(n):
-    return {i: line_type.CLEARED for i in range(1, n + 1)}
+def update_line_status(lines):
+    line_status = {}
 
-
-def update_lines_status(lines_status, lines):
-    for line_number in lines_status.keys():
-        line = lines[line_number - 1]
+    for line_number in lines.keys():
+        line = lines[line_number]
 
         if re.search(r"^\d\d\d\d-\d\d-\d\d", line) and not re.search(
             r"^\d\d\d\d-\d\d-\d\d \* ", line
         ):
-            lines_status[line_number] = line_type.UNCLEARED_HEAD
+            line_status[line_number] = line_type.UNCLEARED_HEAD
 
         elif (
-            line_number > 1
-            and lines_status[line_number - 1] == line_type.UNCLEARED_HEAD
+            line_number >= 2
+            and line_status[line_number - 1] == line_type.UNCLEARED_HEAD
             and line.strip().startswith("; generated-transaction:")
         ):
-            lines_status[line_number] = line_type.GENERATED_COMMENTS
+            line_status[line_number] = line_type.GENERATED_COMMENTS
 
         elif (
-            line_number > 1
-            and lines_status[line_number - 1]
+            line_number >= 2
+            and line_status[line_number - 1]
             in {line_type.UNCLEARED_HEAD, line_type.UNCLEARED_BODY}
             and line.startswith("    ")
         ):
-            lines_status[line_number] = line_type.UNCLEARED_BODY
+            line_status[line_number] = line_type.UNCLEARED_BODY
 
         elif (
-            line_number > 2
-            and lines_status[line_number - 2] == line_type.UNCLEARED_HEAD
-            and lines_status[line_number - 1] == line_type.GENERATED_COMMENTS
+            line_number >= 3
+            and line_status[line_number - 2] == line_type.UNCLEARED_HEAD
+            and line_status[line_number - 1] == line_type.GENERATED_COMMENTS
         ):
-            lines_status[line_number] = line_type.UNCLEARED_BODY
+            line_status[line_number] = line_type.UNCLEARED_BODY
 
         else:
-            lines_status[line_number] = line_type.CLEARED
+            line_status[line_number] = line_type.CLEARED
 
-    return lines_status
+    return line_status
 
 
 def main():
@@ -114,14 +102,14 @@ def main():
     shutil.copy(file_path, bak_file_path)
 
     greeting_message = """
-  _    _ _          _                    _____ _                   _    _      _                 
- | |  | | |        | |                  / ____| |                 | |  | |    | |                
- | |__| | | ___  __| | __ _  ___ _ __  | |    | | ___  __ _ _ __  | |__| | ___| |_ __   ___ _ __ 
+  _    _ _          _                    _____ _                   _    _      _
+ | |  | | |        | |                  / ____| |                 | |  | |    | |
+ | |__| | | ___  __| | __ _  ___ _ __  | |    | | ___  __ _ _ __  | |__| | ___| |_ __   ___ _ __
  |  __  | |/ _ \/ _` |/ _` |/ _ \ '__| | |    | |/ _ \/ _` | '__| |  __  |/ _ \ | '_ \ / _ \ '__|
- | |  | | |  __/ (_| | (_| |  __/ |    | |____| |  __/ (_| | |    | |  | |  __/ | |_) |  __/ |   
- |_|  |_|_|\___|\__,_|\__, |\___|_|     \_____|_|\___|\__,_|_|    |_|  |_|\___|_| .__/ \___|_|   
-                       __/ |                                                    | |              
-                      |___/                                                     |_|              
+ | |  | | |  __/ (_| | (_| |  __/ |    | |____| |  __/ (_| | |    | |  | |  __/ | |_) |  __/ |
+ |_|  |_|_|\___|\__,_|\__, |\___|_|     \_____|_|\___|\__,_|_|    |_|  |_|\___|_| .__/ \___|_|
+                       __/ |                                                    | |
+                      |___/                                                     |_|
 """
 
     print(greeting_message)
@@ -133,15 +121,15 @@ def main():
     print("Type 'q', 'quit', CTRL+C, or CTRL+D to quit.")
     print("=============================================")
 
-    with open(file_path, "r") as f:
-        lines = f.readlines()
-
-    lines_status = initialize_line_status(len(lines))
-
     while True:
-        update_lines_status(lines_status, lines)
+        with open(file_path, "r") as f:
+            lines = f.readlines()
 
-        uncleared_count = count_uncleared(lines_status)
+        lines = {index: line for index, line in enumerate(lines)}
+
+        line_status = update_line_status(lines)
+
+        uncleared_count = count_uncleared(line_status)
 
         if uncleared_count == 0:
             print("All cleared. Bye!")
@@ -152,42 +140,36 @@ def main():
 
         search_string = get_regex_search_string()
 
-        if search_string == search_string_type.QUIT:
-            break
-
-        uncleared_txs = [
-            [k] for k, v in lines_status.items() if v == line_type.UNCLEARED_HEAD
+        uncleared_transactions = [
+            [k] for k, v in line_status.items() if v == line_type.UNCLEARED_HEAD
         ]
 
         tx_text = {}
 
-        for tx in uncleared_txs:
+        for tx in uncleared_transactions:
             text = []
 
             header = tx[0]
 
-            text.append(lines[header - 1])
+            text.append(lines[header])
 
             ptr = header + 1
 
-            while lines_status.get(ptr) in {
+            while line_status.get(ptr) in {
                 line_type.GENERATED_COMMENTS,
                 line_type.UNCLEARED_BODY,
             }:
-                tx.append(lines_status[ptr])
-                text.append(lines[ptr - 1])
+                tx.append(line_status[ptr])
+                text.append(lines[ptr])
 
                 ptr += 1
 
             tx_text[header] = "".join(text)
 
-        pprint(uncleared_txs)
-        pprint(tx_text)
-
         if search_string != search_string_type.ALL:
-            uncleared_txs = [
+            uncleared_transactions = [
                 tx
-                for tx in uncleared_txs
+                for tx in uncleared_transactions
                 if re.search(search_string, tx_text[tx[0]], flags=re.I)
             ]
 
@@ -197,8 +179,28 @@ def main():
                 if re.search(search_string, v, flags=re.I)
             }
 
-        pprint(uncleared_txs)
-        pprint(tx_text)
+        uncleared_transactions = {tx[0]: tx for tx in uncleared_transactions}
+
+        for k, v in tx_text.items():
+            print(v)
+
+            decision = get_tx_decision()
+
+            if decision == tx_decision_type.NO:
+                pass
+
+            elif decision == tx_decision_type.YES:
+                lines[k] = re.sub(r"^(\d\d\d\d-\d\d-\d\d) ", r"\1 * ", lines[k])
+
+                if uncleared_transactions[k][1] == line_type.GENERATED_COMMENTS:
+                    del lines[k + 1]
+
+                with open(file_path, "w") as f:
+                    for k in sorted(lines.keys()):
+                        f.write(lines[k])
+
+            else:
+                raise ValueError
 
 
 if __name__ == "__main__":
