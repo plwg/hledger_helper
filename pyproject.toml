@@ -16,6 +16,7 @@ python = "^3.11"
 ruff = "^0.5.0"
 pre-commit = "^3.7.0"
 yfinance = "^0.2.40"
+blessed = "^1.20.0"
 
 
 [build-system]

@@ -4,6 +4,8 @@ import shutil
 from enum import Enum
 from pathlib import Path
 
+from blessed import Terminal
+
 line_type = Enum(
     "Type",
     ["CLEARED", "UNCLEARED_HEAD", "UNCLEARED_BODY", "GENERATED_COMMENTS"],
@@ -11,10 +13,14 @@ line_type = Enum(
 search_string_type = Enum("Type", ["ALL"])
 tx_decision_type = Enum("Type", ["YES", "NO"])
 
+term = Terminal()
+
 
 def get_tx_decision():
     try:
-        user_input = input("Clear Transaction (Y/n/q): ")
+        print(term.move_y(term.height))
+        user_input = input(term.green("Clear Transaction (Y/n/q): "))
+        print(term.clear + term.home)
 
         if user_input.lower() in {"quit", "q"}:
             print("Bye!")
@@ -33,8 +39,10 @@ def get_tx_decision():
 def get_regex_search_string():
     try:
         search_string = input(
-            "Regex for filtering transaction (leave blank for no filter): "
+            term.green("Regex for filtering transaction (leave blank for no filter): ")
         )
+
+        print(term.clear + term.home)
 
         if search_string.lower() in {"quit", "q"}:
             print("Bye!")
@@ -93,6 +101,8 @@ def update_line_status(lines):
 
 
 def main():
+    print(term.home + term.clear + term.move_y(term.height // 2))
+
     file_path_str = "~/finance/my.ledger"
     bak_file_path_str = file_path_str + ".bak"
 
@@ -129,12 +139,13 @@ def main():
 
         uncleared_count = count_uncleared(line_status)
 
+        print(term.move_y(term.height))
         if uncleared_count == 0:
             print("All cleared. Bye!")
             break
 
         else:
-            print(f"{uncleared_count} uncleared transaction left.")
+            print(term.yellow(f"{uncleared_count} uncleared transaction left."))
 
         search_string = get_regex_search_string()
 
@@ -180,6 +191,11 @@ def main():
         uncleared_transactions = {tx[0]: tx for tx in uncleared_transactions}
 
         for k, v in tx_text.items():
+            print(
+                term.home
+                + term.clear
+                + term.move_y(term.height - len(uncleared_transactions[k]))
+            )
             print(v)
 
             decision = get_tx_decision()
