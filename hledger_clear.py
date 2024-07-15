@@ -1,4 +1,5 @@
 # TODO: add check to guard against corruption
+# TODO: add option to clear all
 import re
 import shutil
 from enum import Enum
