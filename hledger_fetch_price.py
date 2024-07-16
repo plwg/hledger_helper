@@ -1,5 +1,6 @@
 #!./.venv/bin/python
 import re
+from collections import namedtuple
 from datetime import datetime as dt
 from datetime import timedelta as timedelta
 from pathlib import Path
@@ -12,12 +13,12 @@ def fetch_hist_price(name, start_date):
     return price_history
 
 
-def parse_hledger_format(price_history, commodity1, commodity2):
+def parse_hledger_format(price_history, commodity1, commodity2, append_space):
     prices = []
 
     for index, row in price_history.iterrows():
         prices.append(
-            f"P {index.date()} {commodity1} {commodity2}{round(row['Close'],2)}\n"
+            f"P {index.date()} {commodity1} {commodity2}{' ' if append_space else ''}{round(row['Close'],2)}\n"
         )
 
     return prices
@@ -39,15 +40,23 @@ def main():
 
     daily_price = []
 
-    daily_price.extend(
-        parse_hledger_format(fetch_hist_price("ETH-USD", start_date), "ETH", "USD ")
-    )
-    daily_price.extend(
-        parse_hledger_format(fetch_hist_price("USDCNY=x", start_date), "USD", "CNY ")
-    )
-    daily_price.extend(
-        parse_hledger_format(fetch_hist_price("USDSGD=x", start_date), "USD", "S$")
-    )
+    CommodityPair = namedtuple("CommodityPair", ["name", "x", "y", "append_space"])
+
+    commodity_pairs = [
+        CommodityPair("ETH-USD", "ETH", "USD", True),
+        CommodityPair("USDCNY=x", "USD", "CNY", True),
+        CommodityPair("USDSGD=x", "USD", "S$", False),
+    ]
+
+    for pair in commodity_pairs:
+        daily_price.extend(
+            parse_hledger_format(
+                fetch_hist_price(pair.name, start_date),
+                pair.x,
+                pair.y,
+                pair.append_space,
+            )
+        )
 
     latest_date = max(date_pat.search(line).group(0) for line in daily_price)
 
