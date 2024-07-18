@@ -1,5 +1,5 @@
-from hledger_helper.helpers.options import get_selected_option
-from hledger_helper.ui.menu import menu
+from .helpers.options import get_selected_option
+from .ui.menu import menu
 
 
 def main():

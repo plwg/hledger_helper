@@ -1,6 +1,7 @@
 from blessed import Terminal
-from hledger_helper.helpers.options import get_menu_options
-from hledger_helper.ui.print_greeting import print_greeting
+
+from ..helpers.options import get_menu_options
+from .print_greeting import print_greeting
 
 # Initialize blessed's Terminal
 term = Terminal()
