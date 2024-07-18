@@ -4,6 +4,7 @@ from blessed import Terminal
 
 from .helpers.backup import backup_file
 from .helpers.options import get_selected_option
+from .helpers.status import STATUS
 from .ui.menu import menu
 
 
@@ -19,15 +20,22 @@ def main():
 
         if helper.name == "Fetch Price":
             backup_file(price_path)
-            helper.function(price_path)
+            status = helper.function(price_path)
 
         else:
             backup_file(ledger_path)
-            helper.function(ledger_path)
+            status = helper.function(ledger_path)
 
-        with term.cbreak():
-            print(term.bold_black_on_green("Press Any Key to Continue."), end="")
-            term.inkey()
+        if status == STATUS.WAIT:
+            with term.cbreak():
+                print(term.bold_black_on_green("Press Any Key to Continue."), end="")
+                term.inkey()
+
+        elif status == STATUS.NOWAIT:
+            pass
+
+        else:
+            raise ValueError
 
 
 if __name__ == "__main__":

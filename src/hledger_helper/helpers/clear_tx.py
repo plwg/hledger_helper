@@ -5,12 +5,14 @@ from enum import Enum
 
 from blessed import Terminal
 
+from .status import STATUS
+
 line_type = Enum(
     "Type",
     ["CLEARED", "UNCLEARED_HEAD", "UNCLEARED_BODY", "GENERATED_COMMENTS"],
 )
-search_string_type = Enum("Type", ["ALL"])
-tx_decision_type = Enum("Type", ["YES", "NO"])
+search_string_type = Enum("Type", ["ALL", "QUIT"])
+tx_decision_type = Enum("Type", ["YES", "NO", "QUIT"])
 
 term = Terminal()
 
@@ -22,8 +24,7 @@ def get_tx_decision():
         print(term.clear + term.home)
 
         if user_input.lower() in {"quit", "q"}:
-            print("Bye!")
-            exit()
+            return tx_decision_type.QUIT
         elif user_input.lower() in {"", "y", "yes"}:
             return tx_decision_type.YES
         elif user_input.lower() in {"n", "no"}:
@@ -44,8 +45,7 @@ def get_regex_search_string():
         print(term.clear + term.home)
 
         if search_string.lower() in {"quit", "q"}:
-            print("Bye!")
-            exit()
+            return search_string_type.QUIT
         elif search_string == "":
             return search_string_type.ALL
         else:
@@ -125,6 +125,9 @@ def clear_tx(ledger_path):
 
         search_string = get_regex_search_string()
 
+        if search_string == search_string_type.QUIT:
+            return STATUS.NOWAIT
+
         uncleared_transactions = [
             [k] for k, v in line_status.items() if v == line_type.UNCLEARED_HEAD
         ]
@@ -176,6 +179,9 @@ def clear_tx(ledger_path):
 
             decision = get_tx_decision()
 
+            if decision == tx_decision_type.QUIT:
+                return STATUS.NOWAIT
+
             if decision == tx_decision_type.NO:
                 pass
 
@@ -191,3 +197,5 @@ def clear_tx(ledger_path):
 
             else:
                 raise ValueError
+
+            return STATUS.WAIT

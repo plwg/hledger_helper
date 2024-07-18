@@ -4,6 +4,8 @@ from pathlib import Path
 
 from blessed import Terminal
 
+from .status import STATUS
+
 
 def sort_tx(ledger_path):
     term = Terminal()
@@ -34,3 +36,5 @@ def sort_tx(ledger_path):
         ledger_file.write(sorted_ledger)
 
     print(term.bold_white(f"Write sorted ledger to {ledger_path}"))
+
+    return STATUS.WAIT

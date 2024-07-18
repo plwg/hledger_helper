@@ -6,6 +6,8 @@ from datetime import timedelta as timedelta
 
 import yfinance as yf
 
+from .status import STATUS
+
 
 def fetch_hist_price(name, start_date):
     price_history = yf.download(name, start=start_date, interval="1d")
@@ -69,3 +71,5 @@ def fetch_price(price_file_path):
         file_object.writelines(daily_price)
 
     print(f"Prices successfully written to {price_file_path}")
+
+    return STATUS.WAIT
