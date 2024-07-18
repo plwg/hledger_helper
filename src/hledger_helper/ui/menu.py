@@ -8,7 +8,7 @@ term = Terminal()
 
 # Function to display the menu
 def display_menu(options, max_len, len_options, selected_index):
-    print(term.home + term.clear + term.move_y(term.height // 2 - len_options // 2))
+    print(term.move_y(term.height // 2 - len_options // 2))
     print_greeting()
     for index, option in enumerate(options):
         if index == selected_index:
