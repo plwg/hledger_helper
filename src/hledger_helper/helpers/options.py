@@ -1,8 +1,12 @@
+from collections import namedtuple
+
 from blessed import Terminal
 
 from .clear_tx import clear_tx
 from .fetch_price import fetch_price
 from .sort_tx import sort_tx
+
+Helper = namedtuple("Helper", ["name", "function"])
 
 _options = {
     "Clear Transaction": clear_tx,
@@ -31,4 +35,4 @@ def get_selected_option(option):
         print(term.clear)
         print(term.move_y(term.height))
 
-        return (option, _options[option])
+        return Helper(option, _options[option])

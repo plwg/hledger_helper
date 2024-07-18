@@ -18,13 +18,13 @@ def main():
 
         helper = get_selected_option(selection)
 
-        if helper[0] == "Fetch Price":
+        if helper.name == "Fetch Price":
             backup_file(price_path)
-            helper[1](price_path)
+            helper.function(price_path)
 
         else:
             backup_file(ledger_path)
-            helper[1](ledger_path)
+            helper.function(ledger_path)
 
         with term.cbreak():
             print(term.bold_black_on_green("Press Any Key to Continue."), end="")
