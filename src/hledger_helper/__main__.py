@@ -10,11 +10,10 @@ from .ui.menu import menu
 def main():
     term = Terminal()
 
+    ledger_path = Path("~/finance/my.ledger").expanduser()
+    price_path = Path("~/finance/fetched_prices.txt").expanduser()
     while True:
         selection = menu()
-
-        ledger_path = Path("~/finance/my.ledger").expanduser()
-        price_path = Path("~/finance/fetched_prices.txt").expanduser()
 
         helper = get_selected_option(selection)
 
