@@ -24,7 +24,7 @@ def parse_hledger_format(price_history, commodity1, commodity2, append_space):
     return prices
 
 
-def main():
+def fetch_price():
     path = Path("~/finance/fetched_prices.txt").expanduser()
 
     with open(path, "r") as file_object:
@@ -72,7 +72,3 @@ def main():
         file_object.writelines(daily_price)
 
     print(f"Prices successfully written to {path}")
-
-
-if __name__ == "__main__":
-    main()

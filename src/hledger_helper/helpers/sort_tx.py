@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 
 
-def main():
+def sort_tx():
     # Ask whether to create backup
     is_back_up = input("Create backup? (Y/N)")
 
@@ -43,7 +43,3 @@ def main():
         ledger_file.write(sorted_ledger)
 
     print(f"Write sorted ledger to {LEDGER_FILE_PATH}")
-
-
-if __name__ == "__main__":
-    main()

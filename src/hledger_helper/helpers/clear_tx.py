@@ -101,7 +101,7 @@ def update_line_status(lines):
     return line_status
 
 
-def main():
+def clear_tx():
     print(term.home + term.clear + term.move_y(term.height // 2))
 
     file_path_str = "~/finance/my.ledger"
@@ -204,7 +204,3 @@ def main():
 
             else:
                 raise ValueError
-
-
-if __name__ == "__main__":
-    main()
