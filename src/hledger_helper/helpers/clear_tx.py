@@ -1,9 +1,7 @@
 # TODO: add check to guard against corruption
 # TODO: add option to clear all
 import re
-import shutil
 from enum import Enum
-from pathlib import Path
 
 from blessed import Terminal
 
@@ -101,26 +99,15 @@ def update_line_status(lines):
     return line_status
 
 
-def clear_tx():
+def clear_tx(ledger_path):
     print(term.home + term.clear + term.move_y(term.height // 2))
 
-    file_path_str = "~/finance/my.ledger"
-    bak_file_path_str = file_path_str + ".bak"
-
-    file_path = Path(file_path_str).expanduser()
-    bak_file_path = Path(bak_file_path_str).expanduser()
-
-    shutil.copy(file_path, bak_file_path)
-
-    print("=============================================")
-    print(f"File: {file_path}")
-    print(f"Backup file: {bak_file_path}")
     print("=============================================")
     print("Enter regex expression to filter transaction.")
     print("Type 'q', 'quit', CTRL+C, or CTRL+D to quit.")
     print("=============================================")
 
-    with open(file_path, "r") as f:
+    with open(ledger_path, "r") as f:
         lines = f.readlines()
         lines = {index: line for index, line in enumerate(lines)}
     while True:
@@ -198,7 +185,7 @@ def clear_tx():
                 if uncleared_transactions[k][1] == line_type.GENERATED_COMMENTS:
                     del lines[k + 1]
 
-                with open(file_path, "w") as f:
+                with open(ledger_path, "w") as f:
                     for k in sorted(lines.keys()):
                         f.write(lines[k])
 

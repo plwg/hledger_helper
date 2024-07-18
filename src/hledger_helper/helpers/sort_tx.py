@@ -1,28 +1,19 @@
 #!/usr/bin/env python3
-import shutil
 import subprocess
 from pathlib import Path
 
+from blessed import Terminal
 
-def sort_tx():
-    # Ask whether to create backup
-    is_back_up = input("Create backup? (Y/N)")
 
-    # Expand the home directory
-    ledger_dir_path = Path("~/finance").expanduser()
-
+def sort_tx(ledger_path):
+    term = Terminal()
+    print(term.clear + term.move_y(term.height))
     # Define file paths
-    LEDGER_FILE_PATH = ledger_dir_path / "my.ledger"
-    LEDGER_HEADER_FILE_PATH = ledger_dir_path / "my.ledger.header"
-
-    if is_back_up.lower() in {"y", "yes"}:
-        backup_location = LEDGER_FILE_PATH.with_suffix(LEDGER_FILE_PATH.suffix + ".bak")
-        shutil.copy(LEDGER_FILE_PATH, backup_location)
-        print(f"Created backup at {backup_location}")
+    LEDGER_HEADER_FILE_PATH = Path("~/finance/my.ledger.header").expanduser()
 
     # Generate the ledger content
     sorted_ledger = subprocess.run(
-        ["hledger", "print", "-x", "-f", str(LEDGER_FILE_PATH)],
+        ["hledger", "print", "-x", "-f", str(ledger_path)],
         capture_output=True,
         text=True,
     ).stdout
@@ -30,7 +21,7 @@ def sort_tx():
     # Read the header file
     with open(LEDGER_HEADER_FILE_PATH, "r") as header_file:
         header_content = header_file.read()
-    print(f"Read header file from {LEDGER_HEADER_FILE_PATH}")
+    print(term.bold_white(f"Read header file from {LEDGER_HEADER_FILE_PATH}"))
 
     # Check the result ledger
     sorted_ledger = f"{header_content}\n\n\n{sorted_ledger}"
@@ -39,7 +30,7 @@ def sort_tx():
     )
 
     # Write the sorted ledger to the file
-    with open(LEDGER_FILE_PATH, "w") as ledger_file:
+    with open(ledger_path, "w") as ledger_file:
         ledger_file.write(sorted_ledger)
 
-    print(f"Write sorted ledger to {LEDGER_FILE_PATH}")
+    print(term.bold_white(f"Write sorted ledger to {ledger_path}"))

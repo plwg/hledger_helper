@@ -3,7 +3,6 @@ import re
 from collections import namedtuple
 from datetime import datetime as dt
 from datetime import timedelta as timedelta
-from pathlib import Path
 
 import yfinance as yf
 
@@ -24,10 +23,8 @@ def parse_hledger_format(price_history, commodity1, commodity2, append_space):
     return prices
 
 
-def fetch_price():
-    path = Path("~/finance/fetched_prices.txt").expanduser()
-
-    with open(path, "r") as file_object:
+def fetch_price(price_file_path):
+    with open(price_file_path, "r") as file_object:
         lines = file_object.readlines()
 
     date_pat = re.compile(r"\d\d\d\d-\d\d-\d\d")
@@ -68,7 +65,7 @@ def fetch_price():
 
     daily_price.sort()
 
-    with open(path, "w") as file_object:
+    with open(price_file_path, "w") as file_object:
         file_object.writelines(daily_price)
 
-    print(f"Prices successfully written to {path}")
+    print(f"Prices successfully written to {price_file_path}")
