@@ -2,6 +2,7 @@ from pathlib import Path
 
 from blessed import Terminal
 
+from .helpers.backup import backup_file
 from .helpers.options import get_selected_option
 from .ui.menu import menu
 
@@ -18,9 +19,11 @@ def main():
         helper = get_selected_option(selection)
 
         if helper[0] == "Fetch Price":
+            backup_file(price_path)
             helper[1](price_path)
 
         else:
+            backup_file(ledger_path)
             helper[1](ledger_path)
 
         with term.cbreak():
