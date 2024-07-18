@@ -63,7 +63,7 @@ files = [
 name = "cfgv"
 version = "3.4.0"
 description = "Validate configuration and produce human readable error messages."
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "cfgv-3.4.0-py2.py3-none-any.whl", hash = "sha256:b7265b1f29fd3316bfcd2b330d63d024f2bfd8bcb8b0272f8e19a504856c48f9"},
@@ -173,7 +173,7 @@ files = [
 name = "distlib"
 version = "0.3.8"
 description = "Distribution utilities"
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "distlib-0.3.8-py2.py3-none-any.whl", hash = "sha256:034db59a0b96f8ca18035f36290806a9a6e6bd9d1ff91e45a7f172eb17e51784"},
@@ -184,7 +184,7 @@ files = [
 name = "filelock"
 version = "3.15.4"
 description = "A platform independent file lock."
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "filelock-3.15.4-py3-none-any.whl", hash = "sha256:6ca1fffae96225dab4c6eaf1c4f4f28cd2568d3ec2a44e15a08520504de468e7"},
@@ -263,7 +263,7 @@ lxml = ["lxml"]
 name = "identify"
 version = "2.6.0"
 description = "File identification library for Python"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "identify-2.6.0-py2.py3-none-any.whl", hash = "sha256:e79ae4406387a9d300332b5fd366d8994f1525e8414984e1a59e058b2eda2dd0"},
@@ -471,7 +471,7 @@ files = [
 name = "nodeenv"
 version = "1.9.1"
 description = "Node.js virtual environment builder"
-optional = false
+optional = true
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
 files = [
     {file = "nodeenv-1.9.1-py2.py3-none-any.whl", hash = "sha256:ba11c9782d29c27c70ffbdda2d7415098754709be8a7056d79a737cd901155c9"},
@@ -634,7 +634,7 @@ type = ["mypy (>=1.8)"]
 name = "pre-commit"
 version = "3.7.1"
 description = "A framework for managing and maintaining multi-language pre-commit hooks."
-optional = false
+optional = true
 python-versions = ">=3.9"
 files = [
     {file = "pre_commit-3.7.1-py2.py3-none-any.whl", hash = "sha256:fae36fd1d7ad7d6a5a1c0b0d5adb2ed1a3bda5a21bf6c3e5372073d7a11cd4c5"},
@@ -677,7 +677,7 @@ files = [
 name = "pyyaml"
 version = "6.0.1"
 description = "YAML parser and emitter for Python"
-optional = false
+optional = true
 python-versions = ">=3.6"
 files = [
     {file = "PyYAML-6.0.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:d858aa552c999bc8a8d57426ed01e40bef403cd8ccdd0fc5f6f04a00414cac2a"},
@@ -758,7 +758,7 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 name = "ruff"
 version = "0.5.1"
 description = "An extremely fast Python linter and code formatter, written in Rust."
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "ruff-0.5.1-py3-none-linux_armv6l.whl", hash = "sha256:6ecf968fcf94d942d42b700af18ede94b07521bd188aaf2cd7bc898dd8cb63b6"},
@@ -835,7 +835,7 @@ zstd = ["zstandard (>=0.18.0)"]
 name = "virtualenv"
 version = "20.26.3"
 description = "Virtual Python Environment builder"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "virtualenv-20.26.3-py3-none-any.whl", hash = "sha256:8cc4a31139e796e9a7de2cd5cf2489de1217193116a8fd42328f1bd65f434589"},
@@ -901,7 +901,10 @@ requests = ">=2.31"
 nospam = ["requests-cache (>=1.0)", "requests-ratelimiter (>=0.3.1)"]
 repair = ["scipy (>=1.6.3)"]
 
+[extras]
+dev = ["pre-commit", "ruff"]
+
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "307ae885b61d425ef38573cfdabc38726e32a9218a454e08896f373bd59e6f3b"
+content-hash = "d46dcedc357d571756f731350b797bccc55370a9df8ae0299fa677f2eff865f5"
