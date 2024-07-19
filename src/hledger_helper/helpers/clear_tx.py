@@ -1,5 +1,4 @@
 # TODO: add check to guard against corruption
-# TODO: add option to clear all
 import re
 from enum import Enum
 
@@ -12,23 +11,24 @@ line_type = Enum(
     ["CLEARED", "UNCLEARED_HEAD", "UNCLEARED_BODY", "GENERATED_COMMENTS"],
 )
 search_string_type = Enum("Type", ["ALL", "QUIT"])
-tx_decision_type = Enum("Type", ["YES", "NO", "QUIT"])
+tx_decision_type = Enum("Type", ["YES_CLEAR", "YES_CLEAR_ALL", "DONT_CLEAR", "QUIT"])
 
 term = Terminal()
 
 
 def get_tx_decision():
     try:
-        print(term.move_y(term.height))
-        user_input = input(term.green("Clear Transaction (Y/n/q): "))
+        user_input = input(term.green("Clear Transaction (Y/n/q/a): "))
         print(term.clear + term.home)
 
         if user_input.lower() in {"quit", "q"}:
             return tx_decision_type.QUIT
         elif user_input.lower() in {"", "y", "yes"}:
-            return tx_decision_type.YES
+            return tx_decision_type.YES_CLEAR
         elif user_input.lower() in {"n", "no"}:
-            return tx_decision_type.NO
+            return tx_decision_type.DONT_CLEAR
+        elif user_input.lower() in {"a", "all"}:
+            return tx_decision_type.YES_CLEAR_ALL
 
     except (KeyboardInterrupt, EOFError):
         print("Interrupted")
@@ -39,7 +39,9 @@ def get_tx_decision():
 def get_regex_search_string():
     try:
         search_string = input(
-            term.green("Regex for filtering transaction (leave blank for no filter): ")
+            term.green(
+                'Regex for filtering transaction (leave blank for no filter, "q" or "quit" to menu): '
+            )
         )
 
         print(term.clear + term.home)
@@ -100,12 +102,7 @@ def update_line_status(lines):
 
 
 def clear_tx(ledger_path):
-    print(term.home + term.clear + term.move_y(term.height // 2))
-
-    print("=============================================")
-    print("Enter regex expression to filter transaction.")
-    print("Type 'q', 'quit', CTRL+C, or CTRL+D to quit.")
-    print("=============================================")
+    print(term.move_y(term.height))
 
     with open(ledger_path, "r") as f:
         lines = f.readlines()
@@ -118,7 +115,7 @@ def clear_tx(ledger_path):
         print(term.move_y(term.height))
         if uncleared_count == 0:
             print("All cleared. Bye!")
-            break
+            return STATUS.WAIT
 
         else:
             print(term.yellow(f"{uncleared_count} uncleared transaction left."))
@@ -169,23 +166,27 @@ def clear_tx(ledger_path):
 
         uncleared_transactions = {tx[0]: tx for tx in uncleared_transactions}
 
+        clear_all_flag = False
+
         for k, v in tx_text.items():
-            print(
-                term.home
-                + term.clear
-                + term.move_y(term.height - len(uncleared_transactions[k]))
-            )
             print(v)
 
-            decision = get_tx_decision()
+            if clear_all_flag:
+                decision = tx_decision_type.YES_CLEAR
+
+            else:
+                decision = get_tx_decision()
 
             if decision == tx_decision_type.QUIT:
                 return STATUS.NOWAIT
 
-            if decision == tx_decision_type.NO:
+            if decision == tx_decision_type.DONT_CLEAR:
                 pass
 
-            elif decision == tx_decision_type.YES:
+            elif decision in {
+                tx_decision_type.YES_CLEAR,
+                tx_decision_type.YES_CLEAR_ALL,
+            }:
                 lines[k] = re.sub(r"^(\d\d\d\d-\d\d-\d\d) ", r"\1 * ", lines[k])
 
                 if uncleared_transactions[k][1] == line_type.GENERATED_COMMENTS:
@@ -195,7 +196,10 @@ def clear_tx(ledger_path):
                     for k in sorted(lines.keys()):
                         f.write(lines[k])
 
+                if decision == tx_decision_type.YES_CLEAR_ALL:
+                    clear_all_flag = True
+
             else:
                 raise ValueError
 
-    return STATUS.WAIT
+        lines = {index: lines[k] for index, k in enumerate(sorted(lines.keys()))}
