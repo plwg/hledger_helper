@@ -27,8 +27,8 @@ def main():
             status = helper.function(ledger_path)
 
         if status == STATUS.WAIT:
-            with term.cbreak():
-                print(term.bold_black_on_green("Press Any Key to Continue."), end="")
+            with term.cbreak(), term.hidden_cursor():
+                print(term.bold_white_on_green("Press Any Key to Continue."))
                 term.inkey()
 
         elif status == STATUS.NOWAIT:

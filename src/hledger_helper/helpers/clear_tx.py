@@ -198,4 +198,4 @@ def clear_tx(ledger_path):
             else:
                 raise ValueError
 
-            return STATUS.WAIT
+    return STATUS.WAIT
