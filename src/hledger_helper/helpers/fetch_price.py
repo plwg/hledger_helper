@@ -25,7 +25,7 @@ def parse_hledger_format(price_history, commodity1, commodity2, append_space):
     return prices
 
 
-def fetch_price(price_file_path):
+def fetch_price(price_file_path, commodity_pairs):
     with open(price_file_path, "r") as file_object:
         lines = file_object.readlines()
 
@@ -39,21 +39,17 @@ def fetch_price(price_file_path):
 
     daily_price = []
 
-    CommodityPair = namedtuple("CommodityPair", ["name", "x", "y", "append_space"])
+    CommodityPair = namedtuple("CommodityPair", commodity_pairs[0])
 
-    commodity_pairs = [
-        CommodityPair("ETH-USD", "ETH", "USD", True),
-        CommodityPair("USDCNY=x", "USD", "CNY", True),
-        CommodityPair("USDSGD=x", "USD", "S$", False),
-    ]
+    commodity_pairs = [CommodityPair(**cp) for cp in commodity_pairs]
 
     for pair in commodity_pairs:
         daily_price.extend(
             parse_hledger_format(
-                fetch_hist_price(pair.name, start_date),
-                pair.x,
-                pair.y,
-                pair.append_space,
+                fetch_hist_price(pair.symbol, start_date),
+                pair.base_currency,
+                pair.quote_currency,
+                pair.is_append_space,
             )
         )
 

@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 import subprocess
-from pathlib import Path
 
 from blessed import Terminal
 
 from .status import STATUS
 
 
-def sort_tx(ledger_path):
+def sort_tx(ledger_path, header_path):
     term = Terminal()
     print(term.clear + term.move_y(term.height))
-    # Define file paths
-    LEDGER_HEADER_FILE_PATH = Path("~/finance/my.ledger.header").expanduser()
 
     # Generate the ledger content
     sorted_ledger = subprocess.run(
@@ -21,9 +18,9 @@ def sort_tx(ledger_path):
     ).stdout
 
     # Read the header file
-    with open(LEDGER_HEADER_FILE_PATH, "r") as header_file:
+    with open(header_path, "r") as header_file:
         header_content = header_file.read()
-    print(term.bold_white(f"Read header file from {LEDGER_HEADER_FILE_PATH}"))
+    print(term.bold_white(f"Read header file from {header_path}"))
 
     # Check the result ledger
     sorted_ledger = f"{header_content}\n\n\n{sorted_ledger}"

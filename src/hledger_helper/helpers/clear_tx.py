@@ -190,7 +190,7 @@ def clear_tx(ledger_path):
                     clear_all_flag = True
 
             else:
-                raise ValueError
+                raise NotImplementedError
 
         lines = OrderedDict(
             [(index, lines[k]) for index, k in enumerate(lines.keys(), start=1)]

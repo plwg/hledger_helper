@@ -1,0 +1,15 @@
+[paths]
+
+directory = "~/finance/"
+
+ledger_file = "my.ledger"
+header_file = "my.ledger.header"
+price_file = "fetched_prices.txt"
+
+[commodities]
+
+commodity_pairs = [
+  { symbol = "ETH-USD", base_currency = "ETH", quote_currency = "USD", is_append_space = true },
+  { symbol = "USDCNY=x", base_currency = "USD", quote_currency = "CNY", is_append_space = true },
+  { symbol = "USDSGD=x", base_currency = "USD", quote_currency = "S$", is_append_space = false }
+]
