@@ -3,6 +3,7 @@ import subprocess
 
 from blessed import Terminal
 
+from .check_valid_journal import check_valid_journal
 from .status import STATUS
 
 
@@ -24,9 +25,8 @@ def sort_tx(ledger_path, header_path):
 
     # Check the result ledger
     sorted_ledger = f"{header_content}\n\n\n{sorted_ledger}"
-    subprocess.run(
-        ["hledger", "check", "-f", "-"], input=sorted_ledger, text=True, check=True
-    )
+
+    check_valid_journal(sorted_ledger)
 
     # Write the sorted ledger to the file
     with open(ledger_path, "w") as ledger_file:

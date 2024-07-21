@@ -5,6 +5,7 @@ from enum import Enum
 
 from blessed import Terminal
 
+from .check_valid_journal import check_valid_journal
 from .status import STATUS
 
 line_type = Enum(
@@ -120,6 +121,8 @@ def clear_tx(ledger_path):
 
     with open(ledger_path, "r") as f:
         lines = f.readlines()
+
+    check_valid_journal("".join(lines))
 
     lines = OrderedDict([(index, line) for index, line in enumerate(lines, start=1)])
 
