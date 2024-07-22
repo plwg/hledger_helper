@@ -4,9 +4,10 @@ import tomllib
 from blessed import Terminal
 
 from .helpers.backup import backup_file
-from .helpers.options import get_selected_option
+from .helpers.options import get_main_menu_options, get_selected_option
 from .helpers.status import STATUS
 from .ui.menu import menu
+from .ui.press_key_to_continue import press_key_to_continue
 
 
 def main():
@@ -20,11 +21,12 @@ def main():
     ledger_path = directory / paths["ledger_file"]
     price_path = directory / paths["price_file"]
     header_path = directory / paths["header_file"]
+    recurring_tx_path = directory / paths["recurring_tx_file"]
 
     term = Terminal()
 
     while True:
-        selection = menu()
+        selection = menu(get_main_menu_options())
 
         helper = get_selected_option(selection)
 
@@ -43,13 +45,16 @@ def main():
             backup_file(header_path)
             status = helper.function(ledger_path, header_path)
 
+        elif helper.name == "Generate Recurring Transaction":
+            backup_file(ledger_path)
+
+            status = helper.function(ledger_path, recurring_tx_path)
+
         else:
             raise NotImplementedError
 
         if status == STATUS.WAIT:
-            with term.cbreak(), term.hidden_cursor():
-                print(term.bold_white_on_green("Press Any Key to Continue."))
-                term.inkey()
+            press_key_to_continue(term)
 
         elif status == STATUS.NOWAIT:
             pass

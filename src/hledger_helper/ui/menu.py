@@ -1,6 +1,5 @@
 from blessed import Terminal
 
-from ..helpers.options import get_menu_options
 from .print_greeting import print_greeting
 
 # Initialize blessed's Terminal
@@ -19,10 +18,8 @@ def display_menu(options, max_len, len_options, selected_index):
 
 
 # Main loop for the menu
-def menu():
+def menu(options):
     selected_index = 0
-
-    options = get_menu_options()
 
     max_len = max(len(o) for o in options)
     len_options = len(options)

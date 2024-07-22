@@ -5,6 +5,7 @@ directory = "~/finance/"
 ledger_file = "my.ledger"
 header_file = "my.ledger.header"
 price_file = "fetched_prices.txt"
+recurring_tx_file = "recur_tx.journal"
 
 [commodities]
 
