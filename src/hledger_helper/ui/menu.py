@@ -23,7 +23,7 @@ def format_options(options):
 
 
 def display_menu(options, len_options, selected_index, is_jump=False):
-    print(term.home + term.move_y(term.height // 2 - len_options // 2))
+    print(term.home + term.move_y(term.height // 2 - len_options // 2 - 8))
     print_greeting()
 
     highlight_color_funct = (
