@@ -55,12 +55,12 @@ def menu(options):
             if key in num_key_option:
                 selected_index = int(key) - 1
                 display_menu(options, len_options, selected_index, is_jump=True)
-                time.sleep(0.3)
+                time.sleep(0.2)
                 break
 
             elif key.name == "KEY_ENTER":
                 display_menu(options, len_options, selected_index, is_jump=True)
-                time.sleep(0.3)
+                time.sleep(0.2)
                 break
             elif key.name == "KEY_UP":
                 if selected_index == 0:

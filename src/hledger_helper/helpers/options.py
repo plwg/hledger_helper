@@ -27,12 +27,12 @@ def get_main_menu_options():
 
 
 def get_selected_option(option):
-    term = Terminal()
-    print(term.clear)
     if option not in _options:
         exit()
 
     else:
+        term = Terminal()
+        print(term.clear)
         print(term.move_y(term.height))
 
         return Helper(option, _options[option])
