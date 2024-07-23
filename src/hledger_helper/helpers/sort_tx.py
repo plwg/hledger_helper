@@ -3,6 +3,7 @@ import subprocess
 
 from blessed import Terminal
 
+from .align_posting import align_amounts
 from .check_valid_journal import check_valid_journal
 from .status import STATUS
 
@@ -17,6 +18,9 @@ def sort_tx(ledger_path, header_path):
         capture_output=True,
         text=True,
     ).stdout
+
+    # NOTE: There is no need to account for header here since it is not in the hledger print's output
+    sorted_ledger = align_amounts(sorted_ledger)
 
     # Read the header file
     with open(header_path, "r") as header_file:
