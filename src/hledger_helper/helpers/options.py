@@ -1,4 +1,5 @@
 from collections import namedtuple
+from enum import Enum, auto
 
 from blessed import Terminal
 
@@ -9,30 +10,40 @@ from .generate_recurring_tx import generate_recurring_tx
 
 Helper = namedtuple("Helper", ["name", "function"])
 
-_options = {
-    "Mark Transactions as Cleared": clear_tx,
-    "Clean Up Journal": clean_up_journal,
-    "Fetch Prices": fetch_price,
-    "Generate Recurring Transactions": generate_recurring_tx,
+
+class AvailableHelpers(Enum):
+    MARK_CLEAR = auto()
+    CLEAN_UP = auto()
+    FETCH_PRICE = auto()
+    GEN_RECUR = auto()
+
+
+_helpers = {
+    AvailableHelpers.MARK_CLEAR: Helper("Mark Transactions as Cleared", clear_tx),
+    AvailableHelpers.CLEAN_UP: Helper("Clean Up Journal", clean_up_journal),
+    AvailableHelpers.FETCH_PRICE: Helper("Fetch Prices", fetch_price),
+    AvailableHelpers.GEN_RECUR: Helper(
+        "Generate Recurring Transactions", generate_recurring_tx
+    ),
 }
 
 
 def get_main_menu_options():
-    # Menu options
-    menu_options = list(_options.keys())  # Use () instead of []
-    menu_options.sort()
+    menu_options = sorted(helper.name for helper in _helpers.values())
     menu_options.append("Exit")
-
     return tuple(menu_options)
 
 
 def get_selected_option(option):
-    if option not in _options:
+    if option == "Exit":
+        term = Terminal()
+
+        print(term.clear + term.home)
+
         exit()
 
-    else:
-        term = Terminal()
-        print(term.clear)
-        print(term.move_y(term.height))
+    for k, v in _helpers.items():
+        if v.name == option:
+            return k, v.function
 
-        return Helper(option, _options[option])
+    raise ValueError(f"Invalid option: {option}")

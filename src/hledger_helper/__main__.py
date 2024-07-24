@@ -4,7 +4,11 @@ import tomllib
 from blessed import Terminal
 
 from .helpers.backup import backup_file
-from .helpers.options import get_main_menu_options, get_selected_option
+from .helpers.options import (
+    AvailableHelpers,
+    get_main_menu_options,
+    get_selected_option,
+)
 from .helpers.status import STATUS
 from .ui.menu import menu
 from .ui.press_key_to_continue import press_key_to_continue
@@ -28,27 +32,30 @@ def main():
     while True:
         selection = menu(get_main_menu_options())
 
-        helper = get_selected_option(selection)
+        name, helper = get_selected_option(selection)
 
-        if helper.name == "Fetch Prices":
+        print(term.clear + term.home)
+        print(term.move_y(term.height))
+
+        if name == AvailableHelpers.FETCH_PRICE:
             commodity_pairs = config["commodities"]["commodity_pairs"]
 
             backup_file(price_path)
-            status = helper.function(price_path, commodity_pairs)
+            status = helper(price_path, commodity_pairs)
 
-        elif helper.name == "Mark Transactions as Cleared":
+        elif name == AvailableHelpers.MARK_CLEAR:
             backup_file(ledger_path)
-            status = helper.function(ledger_path)
+            status = helper(ledger_path)
 
-        elif helper.name == "Clean Up Journal":
+        elif name == AvailableHelpers.CLEAN_UP:
             bak_up_path = backup_file(ledger_path)
             backup_file(header_path)
-            status = helper.function(ledger_path, header_path, bak_up_path)
+            status = helper(ledger_path, header_path, bak_up_path)
 
-        elif helper.name == "Generate Recurring Transactions":
+        elif name == AvailableHelpers.GEN_RECUR:
             backup_file(ledger_path)
 
-            status = helper.function(ledger_path, recurring_tx_path)
+            status = helper(ledger_path, recurring_tx_path)
 
         else:
             raise NotImplementedError

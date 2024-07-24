@@ -51,16 +51,20 @@ def generate_recurring_tx(ledger_path, recurring_tx_path):
 
             else:
                 recur_tx = recurring_tx_result.stdout
+                print(term.clear + term.home)
+                print(term.move_y(term.height))
 
                 print(recur_tx)
 
-                decision = input(term.green("Append this to jorunal? (y/N): ")).lower()
+                decision = input(
+                    term.green("Append this to jorunal? (y/N/q): ")
+                ).lower()
 
                 if decision in {"y", "yes"}:
                     with open(ledger_path, "a") as f:
                         f.write(recur_tx)
 
-                elif decision in {"", "n", "no"}:
+                elif decision in {"", "n", "no", "q", "quit"}:
                     continue
 
                 else:
