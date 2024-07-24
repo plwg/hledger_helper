@@ -2,18 +2,18 @@ from collections import namedtuple
 
 from blessed import Terminal
 
+from .clean_up_journal import clean_up_journal
 from .clear_tx import clear_tx
 from .fetch_price import fetch_price
 from .generate_recurring_tx import generate_recurring_tx
-from .sort_tx import sort_tx
 
 Helper = namedtuple("Helper", ["name", "function"])
 
 _options = {
-    "Clear Transaction": clear_tx,
-    "Sort Ledger": sort_tx,
-    "Fetch Price": fetch_price,
-    "Generate Recurring Transaction": generate_recurring_tx,
+    "Mark Transactions as Cleared": clear_tx,
+    "Clean Up Journal": clean_up_journal,
+    "Fetch Prices": fetch_price,
+    "Generate Recurring Transactions": generate_recurring_tx,
 }
 
 

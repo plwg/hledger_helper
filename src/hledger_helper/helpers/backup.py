@@ -6,4 +6,4 @@ def backup_file(path):
 
     shutil.copy(path, backup_path)
 
-    return backup_file
+    return backup_path

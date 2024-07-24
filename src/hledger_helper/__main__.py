@@ -30,22 +30,22 @@ def main():
 
         helper = get_selected_option(selection)
 
-        if helper.name == "Fetch Price":
+        if helper.name == "Fetch Prices":
             commodity_pairs = config["commodities"]["commodity_pairs"]
 
             backup_file(price_path)
             status = helper.function(price_path, commodity_pairs)
 
-        elif helper.name == "Clear Transaction":
+        elif helper.name == "Mark Transactions as Cleared":
             backup_file(ledger_path)
             status = helper.function(ledger_path)
 
-        elif helper.name == "Sort Ledger":
-            backup_file(ledger_path)
+        elif helper.name == "Clean Up Journal":
+            bak_up_path = backup_file(ledger_path)
             backup_file(header_path)
-            status = helper.function(ledger_path, header_path)
+            status = helper.function(ledger_path, header_path, bak_up_path)
 
-        elif helper.name == "Generate Recurring Transaction":
+        elif helper.name == "Generate Recurring Transactions":
             backup_file(ledger_path)
 
             status = helper.function(ledger_path, recurring_tx_path)
