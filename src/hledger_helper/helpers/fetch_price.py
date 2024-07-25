@@ -5,12 +5,13 @@ from datetime import datetime as dt
 from datetime import timedelta as timedelta
 
 import yfinance as yf
+from blessed import Terminal
 
 from .status import STATUS
 
 
 def fetch_hist_price(name, start_date):
-    price_history = yf.download(name, start=start_date, interval="1d")
+    price_history = yf.download(name, start=start_date, interval="1d", progress=False)
     return price_history
 
 
@@ -55,7 +56,22 @@ def fetch_price(price_file_path, commodity_pairs):
 
     latest_date = max(date_pat.search(line).group(0) for line in daily_price)
 
+    term = Terminal()
+
+    print(term.clear + term.home)
+    print("".join(daily_price))
     print(f"Fetched {len(daily_price)} postings from {start_date_str} to {latest_date}")
+
+    descision = input(term.green("Write to file? (Y/n/q): ")).lower()
+
+    if descision in {"", "y", "yes"}:
+        pass
+
+    elif descision in {"n", "no", "q", "quit"}:
+        return STATUS.NOWAIT
+
+    else:
+        raise ValueError
 
     for line in lines:
         if date_pat.search(line).group(0) < start_date_str:
