@@ -5,6 +5,7 @@ from enum import Enum
 
 from blessed import Terminal
 
+from ..ui.press_key_to_continue import press_key_to_continue
 from .check_valid_journal import check_valid_journal
 from .status import STATUS
 
@@ -13,37 +14,48 @@ line_type = Enum(
     ["CLEARED", "UNCLEARED_HEAD", "UNCLEARED_BODY", "GENERATED_COMMENTS"],
 )
 search_string_type = Enum("Type", ["ALL", "QUIT"])
-tx_decision_type = Enum("Type", ["YES_CLEAR", "YES_CLEAR_ALL", "DONT_CLEAR", "QUIT"])
+tx_decision_type = Enum(
+    "Type",
+    ["YES_CLEAR", "YES_CLEAR_ALL", "DONT_CLEAR", "VIEW_REST", "QUIT", "REGEX", "HELP"],
+)
 
 term = Terminal()
 
 
 def get_tx_decision():
-    try:
-        user_input = input(term.green("Clear Transaction (y/n/q/a): ")).lower()
+    while True:
+        print(term.move_y(term.height))
+        try:
+            user_input = input(
+                term.green("Clear Transaction (y/n/q/a/v/r/h): ")
+            ).lower()
 
-        print(term.clear + term.home)
+            if user_input in {"q", "quit"}:
+                return tx_decision_type.QUIT
+            elif user_input in {"", "y", "yes"}:
+                return tx_decision_type.YES_CLEAR
+            elif user_input in {"n", "no"}:
+                return tx_decision_type.DONT_CLEAR
+            elif user_input in {"a", "all"}:
+                return tx_decision_type.YES_CLEAR_ALL
+            elif user_input in {"v", "view"}:
+                return tx_decision_type.VIEW_REST
+            elif user_input in {"h", "help"}:
+                return tx_decision_type.HELP
+            elif user_input in {"r", "regex"}:
+                return tx_decision_type.REGEX
 
-        if user_input in {"q", "quit"}:
-            return tx_decision_type.QUIT
-        elif user_input in {"", "y", "yes"}:
-            return tx_decision_type.YES_CLEAR
-        elif user_input in {"n", "no"}:
-            return tx_decision_type.DONT_CLEAR
-        elif user_input in {"a", "all"}:
-            return tx_decision_type.YES_CLEAR_ALL
-
-    except (KeyboardInterrupt, EOFError):
-        print("Interrupted")
-        print("Bye!")
-        exit()
+        except (KeyboardInterrupt, EOFError):
+            print("Interrupted")
+            print("Bye!")
+            exit()
 
 
 def get_regex_search_string():
     try:
         search_string = input(
             term.green(
-                'Regex for filtering transaction (leave blank for no filter, "q" or "quit" to menu): '
+                'Regex for filtering transaction (leave blank for no filter, "q" or "quit" for menu): '
             )
         )
 
@@ -126,19 +138,24 @@ def clear_tx(ledger_path):
 
     lines = OrderedDict([(index, line) for index, line in enumerate(lines, start=1)])
 
+    view_rest_flag = False
     while True:
         uncleared_tx, uncleared_tx_text, uncleared_count = update_line_status(lines)
 
         print(term.move_y(term.height))
-        if uncleared_count == 0:
-            print("All cleared. Bye!")
-            return STATUS.WAIT
-
+        if view_rest_flag:
+            print("*" * term.width)
+            print("*" * term.width)
         else:
-            print(term.yellow(f"{uncleared_count} uncleared transaction left."))
+            if uncleared_count == 0:
+                print("All cleared. Bye!")
+                return STATUS.WAIT
 
-        search_string = get_regex_search_string()
-        print(term.clear + term.home)
+            else:
+                print(term.yellow(f"{uncleared_count} uncleared transaction left."))
+
+            search_string = get_regex_search_string()
+            print(term.clear + term.home)
 
         if search_string == search_string_type.QUIT:
             return STATUS.NOWAIT
@@ -158,23 +175,54 @@ def clear_tx(ledger_path):
             raise ValueError
 
         clear_all_flag = False
+        view_rest_flag = False
 
         for k, v in uncleared_tx_text.items():
             print(term.move_y(term.height))
-
-            print(v)
+            print(v, end="", flush=True)
 
             if clear_all_flag:
                 decision = tx_decision_type.YES_CLEAR
-
+            elif view_rest_flag:
+                continue
             else:
-                decision = get_tx_decision()
+                while True:
+                    decision = get_tx_decision()
 
-            if decision == tx_decision_type.QUIT:
+                    if decision == tx_decision_type.HELP:
+                        print(term.clear() + term.home() + term.move_y(term.height))
+                        print(
+                            "\n".join(
+                                (
+                                    "y/yes: clear current transaction",
+                                    "n/no: don't clear current transaction",
+                                    "q/quit: quit to main menu",
+                                    "a/all: clear all the remaining transaction in this query",
+                                    "v/view: view remaining transaction in this query",
+                                    "r/regex: enter regex query",
+                                    "h/help: print this help",
+                                )
+                            )
+                        )
+                        press_key_to_continue(term)
+                        print(term.clear() + term.home() + term.move_y(term.height))
+                        print(v, end="", flush=True)
+                    else:
+                        break
+            if decision == tx_decision_type.REGEX:
+                print(term.clear() + term.home() + term.move_y(term.height))
+                break
+
+            elif decision == tx_decision_type.QUIT:
                 return STATUS.NOWAIT
 
             elif decision == tx_decision_type.DONT_CLEAR:
                 pass
+
+            elif decision == tx_decision_type.VIEW_REST:
+                print(term.clear() + term.home() + term.move_y(term.height))
+                print(v, end="", flush=True)
+                view_rest_flag = True
 
             elif decision in {
                 tx_decision_type.YES_CLEAR,
@@ -195,6 +243,6 @@ def clear_tx(ledger_path):
             else:
                 raise NotImplementedError
 
-        lines = OrderedDict(
-            [(index, lines[k]) for index, k in enumerate(lines.keys(), start=1)]
-        )
+            lines = OrderedDict(
+                [(index, lines[k]) for index, k in enumerate(lines.keys(), start=1)]
+            )
