@@ -55,7 +55,7 @@ def get_regex_search_string():
     try:
         search_string = input(
             term.green(
-                'Regex for filtering transaction (leave blank for no filter, "q" or "quit" for menu): '
+                'Regex query for transaction (leave blank for no filter, "q" or "quit" for menu): '
             )
         )
 
@@ -197,10 +197,12 @@ def clear_tx(ledger_path):
                                     "y/yes: clear current transaction",
                                     "n/no: don't clear current transaction",
                                     "q/quit: quit to main menu",
-                                    "a/all: clear all the remaining transaction in this query",
-                                    "v/view: view remaining transaction in this query",
-                                    "r/regex: enter regex query",
+                                    "a/all: clear all the remaining transaction in current query",
+                                    "v/view: view remaining transaction in current query",
+                                    "r/regex: enter new regex query",
                                     "h/help: print this help",
+                                    "",
+                                    "If any, modifications will be written out to file upon each selection.",
                                 )
                             )
                         )
