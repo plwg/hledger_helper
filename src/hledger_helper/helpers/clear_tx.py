@@ -177,9 +177,14 @@ def clear_tx(ledger_path):
         clear_all_flag = False
         view_rest_flag = False
 
-        for k, v in uncleared_tx_text.items():
+        total_num = len(uncleared_tx_text)
+
+        for index, (k, v) in enumerate(uncleared_tx_text.items(), start=1):
             print(term.move_y(term.height))
-            print(v, end="", flush=True)
+
+            if not clear_all_flag:
+                print(f"[{index}/{total_num}]")
+                print(v, end="", flush=True)
 
             if clear_all_flag:
                 decision = tx_decision_type.YES_CLEAR
@@ -208,6 +213,7 @@ def clear_tx(ledger_path):
                         )
                         press_key_to_continue(term)
                         print(term.clear() + term.home() + term.move_y(term.height))
+                        print(f"[{index}/{total_num}]")
                         print(v, end="", flush=True)
                     else:
                         break
@@ -219,10 +225,11 @@ def clear_tx(ledger_path):
                 return STATUS.NOWAIT
 
             elif decision == tx_decision_type.DONT_CLEAR:
-                pass
+                print(term.clear() + term.home() + term.move_y(term.height))
 
             elif decision == tx_decision_type.VIEW_REST:
                 print(term.clear() + term.home() + term.move_y(term.height))
+                print(f"[{index}/{total_num}]")
                 print(v, end="", flush=True)
                 view_rest_flag = True
 
@@ -230,6 +237,7 @@ def clear_tx(ledger_path):
                 tx_decision_type.YES_CLEAR,
                 tx_decision_type.YES_CLEAR_ALL,
             }:
+                print(term.clear() + term.home() + term.move_y(term.height))
                 lines[k] = re.sub(r"^(\d{4}-\d{2}-\d{2}) ", r"\1 * ", lines[k])
 
                 if uncleared_tx[k][1] == line_type.GENERATED_COMMENTS:
