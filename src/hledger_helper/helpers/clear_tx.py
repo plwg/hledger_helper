@@ -245,6 +245,6 @@ def clear_tx(ledger_path):
             else:
                 raise NotImplementedError
 
-            lines = OrderedDict(
-                [(index, lines[k]) for index, k in enumerate(lines.keys(), start=1)]
-            )
+        lines = OrderedDict(
+            [(index, lines[k]) for index, k in enumerate(lines.keys(), start=1)]
+        )
