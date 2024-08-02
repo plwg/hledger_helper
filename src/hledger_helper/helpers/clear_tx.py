@@ -30,20 +30,20 @@ def get_tx_decision():
                 term.green("Clear Transaction (y/n/q/a/v/r/h): ")
             ).lower()
 
-            if user_input in {"q", "quit"}:
-                return tx_decision_type.QUIT
-            elif user_input in {"", "y", "yes"}:
+            if user_input in {"", "y", "yes"}:
                 return tx_decision_type.YES_CLEAR
             elif user_input in {"n", "no"}:
                 return tx_decision_type.DONT_CLEAR
+            elif user_input in {"q", "quit"}:
+                return tx_decision_type.QUIT
             elif user_input in {"a", "all"}:
                 return tx_decision_type.YES_CLEAR_ALL
             elif user_input in {"v", "view"}:
                 return tx_decision_type.VIEW_REST
-            elif user_input in {"h", "help"}:
-                return tx_decision_type.HELP
             elif user_input in {"r", "regex"}:
                 return tx_decision_type.REGEX
+            elif user_input in {"h", "help"}:
+                return tx_decision_type.HELP
 
         except (KeyboardInterrupt, EOFError):
             print("Interrupted")
