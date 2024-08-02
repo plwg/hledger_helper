@@ -1,7 +1,9 @@
 # TODO: add check to guard against corruption
+import datetime
 import re
 from collections import OrderedDict
 from enum import Enum
+from functools import cache
 
 from blessed import Terminal
 
@@ -71,57 +73,111 @@ def get_regex_search_string():
         exit()
 
 
-def update_line_status(lines):
+@cache
+def is_transaction_header(text):
+    match = (
+        re.match(r"((?P<year>\d{4})-)?(?P<month>\d{1,2})-(?P<day>\d{1,2}) .*", text)
+        or re.match(
+            r"((?P<year>\d{4})\.)?(?P<month>\d{1,2})\.(?P<day>\d{1,2}) .*", text
+        )
+        or re.match(r"((?P<year>\d{4})/)?(?P<month>\d{1,2})/(?P<day>\d{1,2}) .*", text)
+    )
+
+    if match:
+        try:
+            month = int(match.group("month"))
+            day = int(match.group("day"))
+
+            if match.group("year"):
+                year = int(match.group("year"))
+                datetime.date(year=year, month=month, day=day)
+            else:
+                # If year is not provided, just validate month and day
+                datetime.date(
+                    year=2000, month=month, day=day
+                )  # Use a leap year to allow Feb 29
+
+            return True
+        except (ValueError, TypeError):
+            return False
+    else:
+        return False
+
+
+@cache
+def is_transaction_header_cleared(text):
+    if is_transaction_header(text):
+        match = (
+            re.match(
+                r"((?P<year>\d{4})-)?(?P<month>\d{1,2})-(?P<day>\d{1,2}) \* ", text
+            )
+            or re.match(
+                r"((?P<year>\d{4})\.)?(?P<month>\d{1,2})\.(?P<day>\d{1,2}) \* ", text
+            )
+            or re.match(
+                r"((?P<year>\d{4})/)?(?P<month>\d{1,2})/(?P<day>\d{1,2}) \* ", text
+            )
+        )
+
+        return match
+
+    else:
+        return False
+
+
+def update_line_status(lines, start_line=1):
     line_status = {}
     uncleared_tx = {}
     uncleared_tx_text = {}
     num_unclear = 0
 
     for line_number, line in lines.items():
-        if re.match(r"\d{4}-\d{2}-\d{2}", line) and not re.match(
-            r"\d{4}-\d{2}-\d{2} \* ", line
-        ):
-            line_status[line_number] = line_type.UNCLEARED_HEAD
+        if line_number < start_line:
+            pass
 
-            uncleared_tx[line_number] = [line_type.UNCLEARED_HEAD]
-            uncleared_tx_text[line_number] = [line]
-
-            current_unclear_head = line_number
-
-            num_unclear += 1
-
-        elif (
-            line_number >= 2
-            and line_status[line_number - 1] == line_type.UNCLEARED_HEAD
-            and line.strip().startswith("; generated-transaction:")
-        ):
-            line_status[line_number] = line_type.GENERATED_COMMENTS
-
-            uncleared_tx[current_unclear_head].append(line_type.GENERATED_COMMENTS)
-            uncleared_tx_text[current_unclear_head].append(line)
-
-        elif (
-            line_number >= 2
-            and line_status[line_number - 1]
-            in {line_type.UNCLEARED_HEAD, line_type.UNCLEARED_BODY}
-            and line.startswith("    ")
-        ):
-            line_status[line_number] = line_type.UNCLEARED_BODY
-
-            uncleared_tx[current_unclear_head].append(line_type.UNCLEARED_BODY)
-            uncleared_tx_text[current_unclear_head].append(line)
-
-        elif (
-            line_number >= 3
-            and line_status[line_number - 2] == line_type.UNCLEARED_HEAD
-            and line_status[line_number - 1] == line_type.GENERATED_COMMENTS
-        ):
-            line_status[line_number] = line_type.UNCLEARED_BODY
-
-            uncleared_tx[current_unclear_head].append(line_type.UNCLEARED_BODY)
-            uncleared_tx_text[current_unclear_head].append(line)
         else:
-            line_status[line_number] = line_type.CLEARED
+            if is_transaction_header(line) and not is_transaction_header_cleared(line):
+                line_status[line_number] = line_type.UNCLEARED_HEAD
+
+                uncleared_tx[line_number] = [line_type.UNCLEARED_HEAD]
+                uncleared_tx_text[line_number] = [line]
+
+                current_unclear_head = line_number
+
+                num_unclear += 1
+
+            elif (
+                line_number >= start_line + 1
+                and line_status[line_number - 1] == line_type.UNCLEARED_HEAD
+                and line.strip().startswith("; generated-transaction:")
+            ):
+                line_status[line_number] = line_type.GENERATED_COMMENTS
+
+                uncleared_tx[current_unclear_head].append(line_type.GENERATED_COMMENTS)
+                uncleared_tx_text[current_unclear_head].append(line)
+
+            elif (
+                line_number >= start_line + 1
+                and line_status[line_number - 1]
+                in {line_type.UNCLEARED_HEAD, line_type.UNCLEARED_BODY}
+                and re.match("\s+\w+", line)
+            ):
+                line_status[line_number] = line_type.UNCLEARED_BODY
+
+                uncleared_tx[current_unclear_head].append(line_type.UNCLEARED_BODY)
+                uncleared_tx_text[current_unclear_head].append(line)
+
+            elif (
+                line_number >= start_line + 2
+                and line_status[line_number - 2] == line_type.UNCLEARED_HEAD
+                and line_status[line_number - 1] == line_type.GENERATED_COMMENTS
+            ):
+                line_status[line_number] = line_type.UNCLEARED_BODY
+
+                uncleared_tx[current_unclear_head].append(line_type.UNCLEARED_BODY)
+                uncleared_tx_text[current_unclear_head].append(line)
+            else:
+                line_status[line_number] = line_type.CLEARED
 
     uncleared_tx_text = {k: "".join(v) for k, v in uncleared_tx_text.items()}
 
@@ -139,8 +195,17 @@ def clear_tx(ledger_path):
     lines = OrderedDict([(index, line) for index, line in enumerate(lines, start=1)])
 
     view_rest_flag = False
+
+    starting_line = 1
+    prev_starting_line = 1
+
     while True:
-        uncleared_tx, uncleared_tx_text, uncleared_count = update_line_status(lines)
+        prev_starting_line = starting_line
+
+        uncleared_tx, uncleared_tx_text, uncleared_count = update_line_status(
+            lines, starting_line
+        )
+        starting_line = min(uncleared_tx.keys())
 
         print(term.move_y(term.height))
         if view_rest_flag:
@@ -189,6 +254,7 @@ def clear_tx(ledger_path):
             if clear_all_flag:
                 decision = tx_decision_type.YES_CLEAR
             elif view_rest_flag:
+                starting_line = prev_starting_line
                 continue
             else:
                 while True:
