@@ -188,6 +188,21 @@ def clear_screen_move_to_bottom():
     print(term.clear() + term.home() + term.move_y(term.height))
 
 
+def print_help_string():
+    print(
+        "y/yes: clear current transaction",
+        "n/no: don't clear current transaction",
+        "q/quit: quit to main menu",
+        "a/all: clear all the remaining transaction in current query",
+        "v/view: view remaining transaction in current query",
+        "r/regex: enter new regex query",
+        "h/help: print this help",
+        "",
+        "If any, modifications will be written out to file upon each selection.",
+        sep="\n",
+    )
+
+
 def clear_tx(ledger_path):
     with open(ledger_path, "r") as f:
         lines = f.readlines()
@@ -197,6 +212,16 @@ def clear_tx(ledger_path):
     lines = OrderedDict([(index, line) for index, line in enumerate(lines, start=1)])
 
     starting_line = 1
+
+    unclear_query_pattern = "|".join(
+        [
+            r"(\d{4}-)?\d{1,2}-\d{1,2}",
+            r"(\d{4}/)?\d{1,2}/\d{1,2}",
+            r"(\d{4}\.)?\d{1,2}\.\d{1,2}",
+        ]
+    )
+
+    unclear_query_pattern = re.compile(f"^({unclear_query_pattern})")
 
     while True:
         clear_screen_move_to_bottom()
@@ -231,16 +256,14 @@ def clear_tx(ledger_path):
         else:
             raise ValueError
 
-        clear_all_flag = False
-
-        total_num = len(uncleared_tx_text)
-
         keys = list(uncleared_tx_text.keys())
+        total_num = len(keys)
+        max_index = total_num - 1
 
         index = 0
-
+        clear_all_flag = False
         clear_screen_move_to_bottom()
-        while index <= total_num - 1:
+        while index <= max_index:
             k = keys[index]
             v = uncleared_tx_text[k]
 
@@ -257,21 +280,7 @@ def clear_tx(ledger_path):
 
             if decision == tx_decision_type.HELP:
                 clear_screen_move_to_bottom()
-                print(
-                    "\n".join(
-                        (
-                            "y/yes: clear current transaction",
-                            "n/no: don't clear current transaction",
-                            "q/quit: quit to main menu",
-                            "a/all: clear all the remaining transaction in current query",
-                            "v/view: view remaining transaction in current query",
-                            "r/regex: enter new regex query",
-                            "h/help: print this help",
-                            "",
-                            "If any, modifications will be written out to file upon each selection.",
-                        )
-                    )
-                )
+                print_help_string()
                 press_key_to_continue(term)
                 clear_screen_move_to_bottom()
 
@@ -308,7 +317,7 @@ def clear_tx(ledger_path):
                 tx_decision_type.YES_CLEAR_ALL,
             }:
                 clear_screen_move_to_bottom()
-                lines[k] = re.sub(r"^(\d{4}-\d{2}-\d{2}) ", r"\1 * ", lines[k])
+                lines[k] = unclear_query_pattern.sub(r"\1 * ", lines[k])
 
                 if uncleared_tx[k][1] == line_type.GENERATED_COMMENTS:
                     del lines[k + 1]
