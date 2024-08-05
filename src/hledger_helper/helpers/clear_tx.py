@@ -125,7 +125,7 @@ def is_transaction_header_cleared(text):
         return False
 
 
-def update_line_status(lines, start_line=1):
+def update_line_status(lines, start_line):
     line_status = {}
     uncleared_tx = {}
     uncleared_tx_text = {}
@@ -194,33 +194,24 @@ def clear_tx(ledger_path):
 
     lines = OrderedDict([(index, line) for index, line in enumerate(lines, start=1)])
 
-    view_rest_flag = False
-
     starting_line = 1
-    prev_starting_line = 1
 
     while True:
-        prev_starting_line = starting_line
-
         uncleared_tx, uncleared_tx_text, uncleared_count = update_line_status(
             lines, starting_line
         )
-        starting_line = min(uncleared_tx.keys())
 
         print(term.move_y(term.height))
-        if view_rest_flag:
-            print("*" * term.width)
-            print("*" * term.width)
+        if uncleared_count == 0:
+            print("All cleared. Bye!")
+            return STATUS.WAIT
+
         else:
-            if uncleared_count == 0:
-                print("All cleared. Bye!")
-                return STATUS.WAIT
+            print(term.yellow(f"{uncleared_count} uncleared transaction left."))
+            starting_line = min(uncleared_tx.keys())
 
-            else:
-                print(term.yellow(f"{uncleared_count} uncleared transaction left."))
-
-            search_string = get_regex_search_string()
-            print(term.clear + term.home)
+        search_string = get_regex_search_string()
+        print(term.clear + term.home)
 
         if search_string == search_string_type.QUIT:
             return STATUS.NOWAIT
@@ -240,11 +231,19 @@ def clear_tx(ledger_path):
             raise ValueError
 
         clear_all_flag = False
-        view_rest_flag = False
 
         total_num = len(uncleared_tx_text)
 
-        for index, (k, v) in enumerate(uncleared_tx_text.items(), start=1):
+        keys = list(uncleared_tx_text.keys())
+
+        index = 0
+
+        while index <= total_num - 1:
+            k = keys[index]
+            v = uncleared_tx_text[k]
+
+            index += 1
+
             print(term.move_y(term.height))
 
             if not clear_all_flag:
@@ -253,37 +252,33 @@ def clear_tx(ledger_path):
 
             if clear_all_flag:
                 decision = tx_decision_type.YES_CLEAR
-            elif view_rest_flag:
-                starting_line = prev_starting_line
-                continue
             else:
-                while True:
-                    decision = get_tx_decision()
+                decision = get_tx_decision()
 
-                    if decision == tx_decision_type.HELP:
-                        print(term.clear() + term.home() + term.move_y(term.height))
-                        print(
-                            "\n".join(
-                                (
-                                    "y/yes: clear current transaction",
-                                    "n/no: don't clear current transaction",
-                                    "q/quit: quit to main menu",
-                                    "a/all: clear all the remaining transaction in current query",
-                                    "v/view: view remaining transaction in current query",
-                                    "r/regex: enter new regex query",
-                                    "h/help: print this help",
-                                    "",
-                                    "If any, modifications will be written out to file upon each selection.",
-                                )
-                            )
+            if decision == tx_decision_type.HELP:
+                print(term.clear() + term.home() + term.move_y(term.height))
+                print(
+                    "\n".join(
+                        (
+                            "y/yes: clear current transaction",
+                            "n/no: don't clear current transaction",
+                            "q/quit: quit to main menu",
+                            "a/all: clear all the remaining transaction in current query",
+                            "v/view: view remaining transaction in current query",
+                            "r/regex: enter new regex query",
+                            "h/help: print this help",
+                            "",
+                            "If any, modifications will be written out to file upon each selection.",
                         )
-                        press_key_to_continue(term)
-                        print(term.clear() + term.home() + term.move_y(term.height))
-                        print(f"[{index}/{total_num}]")
-                        print(v, end="", flush=True)
-                    else:
-                        break
-            if decision == tx_decision_type.REGEX:
+                    )
+                )
+                press_key_to_continue(term)
+                print(term.clear() + term.home() + term.move_y(term.height))
+
+                index -= 1
+                continue
+
+            elif decision == tx_decision_type.REGEX:
                 print(term.clear() + term.home() + term.move_y(term.height))
                 break
 
@@ -294,10 +289,20 @@ def clear_tx(ledger_path):
                 print(term.clear() + term.home() + term.move_y(term.height))
 
             elif decision == tx_decision_type.VIEW_REST:
+                remaining_items = [
+                    value for key, value in uncleared_tx_text.items() if key >= k
+                ]
+
+                num_remaining = len(remaining_items)
+
                 print(term.clear() + term.home() + term.move_y(term.height))
-                print(f"[{index}/{total_num}]")
-                print(v, end="", flush=True)
-                view_rest_flag = True
+                for i, item in enumerate(remaining_items, start=1):
+                    print(f"[{i}/{num_remaining}]")
+                    print(item)
+
+                print("*" * term.width)
+                print("*" * term.width)
+                index -= 1
 
             elif decision in {
                 tx_decision_type.YES_CLEAR,
