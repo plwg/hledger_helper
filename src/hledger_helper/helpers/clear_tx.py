@@ -184,9 +184,11 @@ def update_line_status(lines, start_line):
     return uncleared_tx, uncleared_tx_text, num_unclear
 
 
-def clear_tx(ledger_path):
-    print(term.move_y(term.height))
+def clear_screen_move_to_bottom():
+    print(term.clear() + term.home() + term.move_y(term.height))
 
+
+def clear_tx(ledger_path):
     with open(ledger_path, "r") as f:
         lines = f.readlines()
 
@@ -197,11 +199,11 @@ def clear_tx(ledger_path):
     starting_line = 1
 
     while True:
+        clear_screen_move_to_bottom()
         uncleared_tx, uncleared_tx_text, uncleared_count = update_line_status(
             lines, starting_line
         )
 
-        print(term.move_y(term.height))
         if uncleared_count == 0:
             print("All cleared. Bye!")
             return STATUS.WAIT
@@ -211,7 +213,6 @@ def clear_tx(ledger_path):
             starting_line = min(uncleared_tx.keys())
 
         search_string = get_regex_search_string()
-        print(term.clear + term.home)
 
         if search_string == search_string_type.QUIT:
             return STATUS.NOWAIT
@@ -238,13 +239,12 @@ def clear_tx(ledger_path):
 
         index = 0
 
+        clear_screen_move_to_bottom()
         while index <= total_num - 1:
             k = keys[index]
             v = uncleared_tx_text[k]
 
             index += 1
-
-            print(term.move_y(term.height))
 
             if not clear_all_flag:
                 print(f"[{index}/{total_num}]")
@@ -256,7 +256,7 @@ def clear_tx(ledger_path):
                 decision = get_tx_decision()
 
             if decision == tx_decision_type.HELP:
-                print(term.clear() + term.home() + term.move_y(term.height))
+                clear_screen_move_to_bottom()
                 print(
                     "\n".join(
                         (
@@ -273,20 +273,19 @@ def clear_tx(ledger_path):
                     )
                 )
                 press_key_to_continue(term)
-                print(term.clear() + term.home() + term.move_y(term.height))
+                clear_screen_move_to_bottom()
 
                 index -= 1
                 continue
 
             elif decision == tx_decision_type.REGEX:
-                print(term.clear() + term.home() + term.move_y(term.height))
                 break
 
             elif decision == tx_decision_type.QUIT:
                 return STATUS.NOWAIT
 
             elif decision == tx_decision_type.DONT_CLEAR:
-                print(term.clear() + term.home() + term.move_y(term.height))
+                clear_screen_move_to_bottom()
 
             elif decision == tx_decision_type.VIEW_REST:
                 remaining_items = [
@@ -295,7 +294,7 @@ def clear_tx(ledger_path):
 
                 num_remaining = len(remaining_items)
 
-                print(term.clear() + term.home() + term.move_y(term.height))
+                clear_screen_move_to_bottom()
                 for i, item in enumerate(remaining_items, start=1):
                     print(f"[{i}/{num_remaining}]")
                     print(item)
@@ -308,7 +307,7 @@ def clear_tx(ledger_path):
                 tx_decision_type.YES_CLEAR,
                 tx_decision_type.YES_CLEAR_ALL,
             }:
-                print(term.clear() + term.home() + term.move_y(term.height))
+                clear_screen_move_to_bottom()
                 lines[k] = re.sub(r"^(\d{4}-\d{2}-\d{2}) ", r"\1 * ", lines[k])
 
                 if uncleared_tx[k][1] == line_type.GENERATED_COMMENTS:
