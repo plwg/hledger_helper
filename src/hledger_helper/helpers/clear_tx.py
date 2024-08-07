@@ -7,7 +7,7 @@ from functools import cache
 
 from blessed import Terminal
 
-from ..ui.press_key_to_continue import press_key_to_continue
+from ..ui.display import clear_screen_move_to_bottom, press_key_to_continue
 from .check_valid_journal import check_valid_journal
 from .status import STATUS
 
@@ -184,10 +184,6 @@ def update_line_status(lines, start_line):
     return uncleared_tx, uncleared_tx_text, num_unclear
 
 
-def clear_screen_move_to_bottom():
-    print(term.clear() + term.home() + term.move_y(term.height))
-
-
 def print_help_string():
     print(
         "y/yes: clear current transaction",
@@ -224,7 +220,7 @@ def clear_tx(ledger_path):
     unclear_query_pattern = re.compile(f"^({unclear_query_pattern})")
 
     while True:
-        clear_screen_move_to_bottom()
+        clear_screen_move_to_bottom(term)
         uncleared_tx, uncleared_tx_text, uncleared_count = update_line_status(
             lines, starting_line
         )
@@ -262,7 +258,7 @@ def clear_tx(ledger_path):
 
         index = 0
         clear_all_flag = False
-        clear_screen_move_to_bottom()
+        clear_screen_move_to_bottom(term)
         while index <= max_index:
             k = keys[index]
             v = uncleared_tx_text[k]
@@ -275,10 +271,10 @@ def clear_tx(ledger_path):
                 decision = get_tx_decision()
 
             if decision == tx_decision_type.HELP:
-                clear_screen_move_to_bottom()
+                clear_screen_move_to_bottom(term)
                 print_help_string()
                 press_key_to_continue(term)
-                clear_screen_move_to_bottom()
+                clear_screen_move_to_bottom(term)
 
                 index -= 1
                 continue
@@ -290,7 +286,7 @@ def clear_tx(ledger_path):
                 return STATUS.NOWAIT
 
             elif decision == tx_decision_type.DONT_CLEAR:
-                clear_screen_move_to_bottom()
+                clear_screen_move_to_bottom(term)
 
             elif decision == tx_decision_type.VIEW_REST:
                 remaining_items = [
@@ -299,7 +295,7 @@ def clear_tx(ledger_path):
 
                 num_remaining = len(remaining_items)
 
-                clear_screen_move_to_bottom()
+                clear_screen_move_to_bottom(term)
                 for i, item in enumerate(remaining_items, start=1):
                     print(f"[{i}/{num_remaining}]")
                     print(item)
@@ -316,7 +312,7 @@ def clear_tx(ledger_path):
                 if decision == tx_decision_type.YES_CLEAR_ALL:
                     clear_all_flag = True
 
-                clear_screen_move_to_bottom()
+                clear_screen_move_to_bottom(term)
                 lines[k] = unclear_query_pattern.sub(r"\2* ", lines[k])
 
                 if uncleared_tx[k][1] == line_type.GENERATED_COMMENTS:

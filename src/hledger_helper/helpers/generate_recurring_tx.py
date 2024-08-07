@@ -2,7 +2,7 @@ import subprocess
 
 from blessed import Terminal
 
-from ..ui.press_key_to_continue import press_key_to_continue
+from ..ui.display import press_key_to_continue
 from .status import STATUS
 
 

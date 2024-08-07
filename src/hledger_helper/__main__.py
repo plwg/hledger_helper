@@ -10,8 +10,8 @@ from .helpers.options import (
     get_selected_option,
 )
 from .helpers.status import STATUS
+from .ui.display import press_key_to_continue
 from .ui.menu import menu
-from .ui.press_key_to_continue import press_key_to_continue
 
 
 def main():
