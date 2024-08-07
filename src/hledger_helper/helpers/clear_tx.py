@@ -231,14 +231,15 @@ def clear_tx(ledger_path):
             print("All cleared. Bye!")
             return STATUS.WAIT
 
-        else:
-            print(term.yellow(f"{uncleared_count} uncleared transaction left."))
-            starting_line = min(uncleared_tx.keys())
+        print(term.yellow(f"{uncleared_count} uncleared transaction left."))
+        starting_line = min(uncleared_tx.keys())
 
         search_string = get_regex_search_string()
 
         if search_string == search_string_type.QUIT:
             return STATUS.NOWAIT
+        elif search_string == search_string_type.ALL:
+            pass
         elif search_string != search_string_type.ALL:
             uncleared_tx_text = {
                 k: v
@@ -249,8 +250,6 @@ def clear_tx(ledger_path):
             uncleared_tx = {
                 k: v for k, v in uncleared_tx.items() if k in uncleared_tx_text
             }
-        elif search_string == search_string_type.ALL:
-            pass
         else:
             raise ValueError
 
