@@ -24,9 +24,11 @@ tx_decision_type = Enum(
 term = Terminal()
 
 
-def get_tx_decision():
+def get_tx_decision(prefix, tx):
     while True:
-        print(term.move_y(term.height))
+        clear_screen_move_to_bottom(term)
+        print(prefix)
+        print(tx, end="", flush=True)
         try:
             user_input = input(
                 term.green("Clear Transaction (y/n/q/a/v/r/h): ")
@@ -266,9 +268,7 @@ def clear_tx(ledger_path):
             index += 1
 
             if not clear_all_flag:
-                print(f"[{index}/{total_num}]")
-                print(v, end="", flush=True)
-                decision = get_tx_decision()
+                decision = get_tx_decision(prefix=f"[{index}/{total_num}]", tx=v)
 
             if decision == tx_decision_type.HELP:
                 clear_screen_move_to_bottom(term)
