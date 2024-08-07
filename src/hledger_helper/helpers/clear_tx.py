@@ -304,8 +304,9 @@ def clear_tx(ledger_path):
                     print(f"[{i}/{num_remaining}]")
                     print(item)
 
-                print("*" * term.width)
-                print("*" * term.width)
+                for _ in range(2):
+                    print("*" * term.width)
+
                 index -= 1
 
             elif decision in {
