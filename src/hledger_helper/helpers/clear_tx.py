@@ -215,9 +215,9 @@ def clear_tx(ledger_path):
 
     unclear_query_pattern = "|".join(
         [
-            r"(\d{4}-)?\d{1,2}-\d{1,2}",
-            r"(\d{4}/)?\d{1,2}/\d{1,2}",
-            r"(\d{4}\.)?\d{1,2}\.\d{1,2}",
+            r"((\d{4}-)?\d{1,2}-\d{1,2} )(! )?",
+            r"((\d{4}/)?\d{1,2}/\d{1,2} )(! )?",
+            r"((\d{4}\.)?\d{1,2}\.\d{1,2} )(! )?",
         ]
     )
 
@@ -316,7 +316,7 @@ def clear_tx(ledger_path):
                     clear_all_flag = True
 
                 clear_screen_move_to_bottom()
-                lines[k] = unclear_query_pattern.sub(r"\1 * ", lines[k])
+                lines[k] = unclear_query_pattern.sub(r"\2* ", lines[k])
 
                 if uncleared_tx[k][1] == line_type.GENERATED_COMMENTS:
                     del lines[k + 1]
