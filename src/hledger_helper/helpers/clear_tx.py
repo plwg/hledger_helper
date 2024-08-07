@@ -272,10 +272,6 @@ def clear_tx(ledger_path):
             if not clear_all_flag:
                 print(f"[{index}/{total_num}]")
                 print(v, end="", flush=True)
-
-            if clear_all_flag:
-                decision = tx_decision_type.YES_CLEAR
-            else:
                 decision = get_tx_decision()
 
             if decision == tx_decision_type.HELP:
@@ -316,6 +312,9 @@ def clear_tx(ledger_path):
                 tx_decision_type.YES_CLEAR,
                 tx_decision_type.YES_CLEAR_ALL,
             }:
+                if decision == tx_decision_type.YES_CLEAR_ALL:
+                    clear_all_flag = True
+
                 clear_screen_move_to_bottom()
                 lines[k] = unclear_query_pattern.sub(r"\1 * ", lines[k])
 
@@ -325,10 +324,6 @@ def clear_tx(ledger_path):
                 with open(ledger_path, "w") as f:
                     for line in lines.values():
                         f.write(line)
-
-                if decision == tx_decision_type.YES_CLEAR_ALL:
-                    clear_all_flag = True
-
             else:
                 raise NotImplementedError
 
