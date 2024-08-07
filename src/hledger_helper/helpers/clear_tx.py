@@ -266,7 +266,9 @@ def clear_tx(ledger_path):
 
             index += 1
 
-            if not clear_all_flag:
+            if clear_all_flag:
+                decision = tx_decision_type.YES_CLEAR_ALL
+            else:
                 decision = get_tx_decision(prefix=f"[{index}/{total_num}]", tx=v)
 
             if decision == tx_decision_type.HELP:
