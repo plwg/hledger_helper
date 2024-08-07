@@ -7,7 +7,7 @@ from datetime import timedelta as timedelta
 import yfinance as yf
 from blessed import Terminal
 
-from .status import STATUS
+from .return_status import STATUS
 
 
 def fetch_hist_price(name, start_date):

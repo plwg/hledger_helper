@@ -3,7 +3,7 @@ import subprocess
 from blessed import Terminal
 
 from ..ui.display import press_key_to_continue
-from .status import STATUS
+from .return_status import STATUS
 
 
 def generate_recurring_tx(ledger_path, recurring_tx_path):

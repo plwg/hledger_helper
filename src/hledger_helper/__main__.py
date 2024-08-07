@@ -9,7 +9,7 @@ from .helpers.options import (
     get_main_menu_options,
     get_selected_option,
 )
-from .helpers.status import STATUS
+from .helpers.return_status import STATUS
 from .ui.display import press_key_to_continue
 from .ui.menu import menu
 

@@ -5,7 +5,7 @@ from blessed import Terminal
 
 from .align_posting import align_amounts
 from .check_valid_journal import check_valid_journal
-from .status import STATUS
+from .return_status import STATUS
 
 
 def clean_up_journal(ledger_path, header_path, backup_ledger_path):
