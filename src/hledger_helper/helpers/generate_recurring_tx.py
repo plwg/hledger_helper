@@ -1,14 +1,10 @@
 import subprocess
 
-from blessed import Terminal
-
 from ..ui.display import press_key_to_continue
 from .return_status import STATUS
 
 
-def generate_recurring_tx(ledger_path, recurring_tx_path):
-    term = Terminal()
-
+def generate_recurring_tx(ledger_path, recurring_tx_path, term):
     while True:
         print(term.clear + term.home)
         print(term.move_y(term.height))

@@ -1,11 +1,7 @@
 import time
 from functools import lru_cache
 
-from blessed import Terminal
-
 from .print_greeting import print_greeting
-
-term = Terminal()
 
 
 @lru_cache(maxsize=1)
@@ -22,9 +18,9 @@ def format_options(options):
     return formatted_options
 
 
-def display_menu(options, len_options, selected_index, is_jump=False):
+def display_menu(options, term, len_options, selected_index, is_jump=False):
     print(term.home + term.move_y(term.height // 2 - len_options // 2 - 8))
-    print_greeting()
+    print_greeting(term)
 
     highlight_color_funct = (
         term.bold_white_on_yellow if is_jump else term.bold_white_on_green
@@ -39,7 +35,7 @@ def display_menu(options, len_options, selected_index, is_jump=False):
             print(term.center(term.white(option)))
 
 
-def menu(options):
+def menu(options, term):
     print(term.clear + term.home)
 
     selected_index = 0
@@ -50,18 +46,18 @@ def menu(options):
     num_key_option = {str(i) for i in range(1, len_options + 1)}
 
     with term.cbreak(), term.hidden_cursor():
-        display_menu(options, len_options, selected_index)
+        display_menu(options, term, len_options, selected_index)
         while True:
             key = term.inkey()
 
             if key in num_key_option:
                 selected_index = int(key) - 1
-                display_menu(options, len_options, selected_index, is_jump=True)
+                display_menu(options, term, len_options, selected_index, is_jump=True)
                 time.sleep(0.2)
                 break
 
             elif key.name == "KEY_ENTER":
-                display_menu(options, len_options, selected_index, is_jump=True)
+                display_menu(options, term, len_options, selected_index, is_jump=True)
                 time.sleep(0.2)
                 break
             elif key.name == "KEY_UP":
@@ -70,13 +66,13 @@ def menu(options):
 
                 else:
                     selected_index -= 1
-                display_menu(options, len_options, selected_index)
+                display_menu(options, term, len_options, selected_index)
             elif key.name == "KEY_DOWN":
                 if selected_index == end:
                     selected_index = 0
                 else:
                     selected_index += 1
-                display_menu(options, len_options, selected_index)
+                display_menu(options, term, len_options, selected_index)
             else:
                 pass
 

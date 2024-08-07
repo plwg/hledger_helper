@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 import subprocess
 
-from blessed import Terminal
-
 from .align_posting import align_amounts
 from .check_valid_journal import check_valid_journal
 from .return_status import STATUS
 
 
-def clean_up_journal(ledger_path, header_path, backup_ledger_path):
-    term = Terminal()
-
+def clean_up_journal(ledger_path, header_path, backup_ledger_path, term):
     with term.hidden_cursor():
         warning_message = (
             "Relying on hledger print, cleaning up has the following behaviors:",

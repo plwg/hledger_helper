@@ -30,9 +30,9 @@ def main():
     term = Terminal()
 
     while True:
-        selection = menu(get_main_menu_options())
+        selection = menu(get_main_menu_options(), term)
 
-        name, helper = get_selected_option(selection)
+        name, helper = get_selected_option(selection, term)
 
         print(term.clear + term.home)
         print(term.move_y(term.height))
@@ -41,21 +41,21 @@ def main():
             commodity_pairs = config["commodities"]["commodity_pairs"]
 
             backup_file(price_path)
-            status = helper(price_path, commodity_pairs)
+            status = helper(price_path, commodity_pairs, term)
 
         elif name == AvailableHelpers.MARK_CLEAR:
             backup_file(ledger_path)
-            status = helper(ledger_path)
+            status = helper(ledger_path, term)
 
         elif name == AvailableHelpers.CLEAN_UP:
             bak_up_path = backup_file(ledger_path)
             backup_file(header_path)
-            status = helper(ledger_path, header_path, bak_up_path)
+            status = helper(ledger_path, header_path, bak_up_path, term)
 
         elif name == AvailableHelpers.GEN_RECUR:
             backup_file(ledger_path)
 
-            status = helper(ledger_path, recurring_tx_path)
+            status = helper(ledger_path, recurring_tx_path, term)
 
         else:
             raise NotImplementedError

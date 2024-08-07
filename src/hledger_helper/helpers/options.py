@@ -1,8 +1,6 @@
 from collections import namedtuple
 from enum import Enum, auto
 
-from blessed import Terminal
-
 from .clean_up_journal import clean_up_journal
 from .clear_tx import clear_tx
 from .fetch_price import fetch_price
@@ -34,10 +32,8 @@ def get_main_menu_options():
     return tuple(menu_options)
 
 
-def get_selected_option(option):
+def get_selected_option(option, term):
     if option == "Exit":
-        term = Terminal()
-
         print(term.clear + term.home)
 
         exit()

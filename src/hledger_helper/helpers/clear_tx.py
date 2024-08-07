@@ -1,11 +1,8 @@
-# TODO: add check to guard against corruption
 import datetime
 import re
 from collections import OrderedDict
 from enum import Enum
 from functools import cache
-
-from blessed import Terminal
 
 from ..ui.display import clear_screen_move_to_bottom, press_key_to_continue
 from .check_valid_journal import check_valid_journal
@@ -21,12 +18,9 @@ tx_decision_type = Enum(
     ["YES_CLEAR", "YES_CLEAR_ALL", "DONT_CLEAR", "VIEW_REST", "QUIT", "REGEX", "HELP"],
 )
 
-term = Terminal()
 
-
-def get_tx_decision(prefix, tx):
+def get_tx_decision(prefix, tx, term):
     while True:
-        clear_screen_move_to_bottom(term)
         print(prefix)
         print(tx, end="", flush=True)
         try:
@@ -55,7 +49,7 @@ def get_tx_decision(prefix, tx):
             exit()
 
 
-def get_regex_search_string():
+def get_regex_search_string(term):
     try:
         search_string = input(
             term.green(
@@ -201,7 +195,7 @@ def print_help_string():
     )
 
 
-def clear_tx(ledger_path):
+def clear_tx(ledger_path, term):
     with open(ledger_path, "r") as f:
         lines = f.readlines()
 
@@ -234,7 +228,8 @@ def clear_tx(ledger_path):
         print(term.yellow(f"{uncleared_count} uncleared transaction left."))
         starting_line = min(uncleared_tx.keys())
 
-        search_string = get_regex_search_string()
+        search_string = get_regex_search_string(term)
+        clear_screen_move_to_bottom(term)
 
         if search_string == search_string_type.QUIT:
             return STATUS.NOWAIT
@@ -259,7 +254,6 @@ def clear_tx(ledger_path):
 
         index = 0
         clear_all_flag = False
-        clear_screen_move_to_bottom(term)
         while index <= max_index:
             k = keys[index]
             v = uncleared_tx_text[k]
@@ -269,7 +263,7 @@ def clear_tx(ledger_path):
             if clear_all_flag:
                 decision = tx_decision_type.YES_CLEAR_ALL
             else:
-                decision = get_tx_decision(prefix=f"[{index}/{total_num}]", tx=v)
+                decision = get_tx_decision(f"[{index}/{total_num}]", v, term)
 
             if decision == tx_decision_type.HELP:
                 clear_screen_move_to_bottom(term)
@@ -281,6 +275,7 @@ def clear_tx(ledger_path):
                 continue
 
             elif decision == tx_decision_type.REGEX:
+                clear_screen_move_to_bottom(term)
                 break
 
             elif decision == tx_decision_type.QUIT:
@@ -304,6 +299,8 @@ def clear_tx(ledger_path):
                 for _ in range(2):
                     print("*" * term.width)
 
+                print()
+
                 index -= 1
 
             elif decision in {
@@ -313,7 +310,6 @@ def clear_tx(ledger_path):
                 if decision == tx_decision_type.YES_CLEAR_ALL:
                     clear_all_flag = True
 
-                clear_screen_move_to_bottom(term)
                 lines[k] = unclear_query_pattern.sub(r"\2* ", lines[k])
 
                 if uncleared_tx[k][1] == line_type.GENERATED_COMMENTS:
@@ -322,6 +318,7 @@ def clear_tx(ledger_path):
                 with open(ledger_path, "w") as f:
                     for line in lines.values():
                         f.write(line)
+                clear_screen_move_to_bottom(term)
             else:
                 raise NotImplementedError
 

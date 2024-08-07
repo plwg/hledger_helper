@@ -1,9 +1,4 @@
-from blessed import Terminal
-
-term = Terminal()
-
-
-def print_greeting():
+def print_greeting(term):
     greeting_message = (
         " _   _ _          _                   _   _      _                 ",
         "| | | | |        | |                 | | | |    | |                ",

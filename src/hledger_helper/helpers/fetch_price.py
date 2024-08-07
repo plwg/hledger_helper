@@ -5,7 +5,6 @@ from datetime import datetime as dt
 from datetime import timedelta as timedelta
 
 import yfinance as yf
-from blessed import Terminal
 
 from .return_status import STATUS
 
@@ -26,7 +25,7 @@ def parse_hledger_format(price_history, commodity1, commodity2, append_space):
     return prices
 
 
-def fetch_price(price_file_path, commodity_pairs):
+def fetch_price(price_file_path, commodity_pairs, term):
     with open(price_file_path, "r") as file_object:
         lines = file_object.readlines()
 
@@ -55,8 +54,6 @@ def fetch_price(price_file_path, commodity_pairs):
         )
 
     latest_date = max(date_pat.search(line).group(0) for line in daily_price)
-
-    term = Terminal()
 
     print(term.clear + term.home)
     print("".join(daily_price))
