@@ -1,7 +1,7 @@
 import time
 from functools import lru_cache
 
-from .print_greeting import print_greeting
+from hh.ui.print_greeting import print_greeting
 
 
 @lru_cache(maxsize=1)

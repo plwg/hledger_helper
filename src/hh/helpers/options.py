@@ -1,10 +1,10 @@
 from collections import namedtuple
 from enum import Enum, auto
 
-from .clean_up_journal import clean_up_journal
-from .clear_tx import clear_tx
-from .fetch_price import fetch_price
-from .generate_recurring_tx import generate_recurring_tx
+from hh.helpers.clean_up_journal import clean_up_journal
+from hh.helpers.clear_tx import clear_tx
+from hh.helpers.fetch_price import fetch_price
+from hh.helpers.generate_recurring_tx import generate_recurring_tx
 
 Helper = namedtuple("Helper", ["name", "function"])
 

@@ -1,29 +1,12 @@
-[tool.poetry]
-name = "hledger_helper"
+[project]
+name = "hh"
 version = "0.1.0"
-description = "A Collection of Helpers for Hledger Plaintext Accounting"
-authors = ["Paul Wang"]
-license = "MIT"
+description = "Add your description here"
 readme = "README.md"
-
-[tool.poetry.dependencies]
-# `poetry install`
-# `poetry add`
-# `poetry remove`
-# `poetry env use 3.12`
-# `peotry install --all-extras`
-python = "^3.11"
-yfinance = "^0.2.40"
-blessed = "^1.20.0"
-ruff = {version = "^0.5.0", optional = true}
-pre-commit = {version = "^3.7.0", optional = true}
-
-[tool.poetry.extras]
-dev = ["ruff", "pre-commit"]
-
-[tool.poetry.scripts]
-hh = "hledger_helper.__main__:main"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires-python = ">=3.11"
+dependencies = [
+    "blessed>=1.20.0",
+    "pre-commit>=4.1.0",
+    "ruff>=0.9.3",
+    "yfinance>=0.2.52",
+]

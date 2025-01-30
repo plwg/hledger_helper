@@ -2,16 +2,15 @@ from pathlib import Path
 
 import tomllib
 from blessed import Terminal
-
-from .helpers.backup import backup_file
-from .helpers.options import (
+from hh.helpers.backup import backup_file
+from hh.helpers.options import (
     AvailableHelpers,
     get_main_menu_options,
     get_selected_option,
 )
-from .helpers.return_status import STATUS
-from .ui.display import press_key_to_continue
-from .ui.menu import menu
+from hh.helpers.return_status import STATUS
+from hh.ui.display import press_key_to_continue
+from hh.ui.menu import menu
 
 
 def main():

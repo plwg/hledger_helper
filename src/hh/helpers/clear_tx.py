@@ -4,9 +4,9 @@ from collections import OrderedDict
 from enum import Enum
 from functools import cache
 
-from ..ui.display import clear_screen_move_to_bottom, press_key_to_continue
-from .check_valid_journal import check_valid_journal
-from .return_status import STATUS
+from hh.helpers.check_valid_journal import check_valid_journal
+from hh.helpers.return_status import STATUS
+from hh.ui.display import clear_screen_move_to_bottom, press_key_to_continue
 
 line_type = Enum(
     "Type",

@@ -1,7 +1,7 @@
 import subprocess
 
-from ..ui.display import press_key_to_continue
-from .return_status import STATUS
+from hh.helpers.return_status import STATUS
+from hh.ui.display import press_key_to_continue
 
 
 def generate_recurring_tx(ledger_path, recurring_tx_path, term):
