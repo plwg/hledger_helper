@@ -9,7 +9,7 @@ def format_options(options):
     formatted_options = []
 
     for index, option in enumerate(options):
-        formatted_options.append(f"{index+1}. {option}")
+        formatted_options.append(f"{index + 1}. {option}")
 
     max_len = max(len(o) for o in formatted_options) + 1
 

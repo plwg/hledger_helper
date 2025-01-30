@@ -19,7 +19,7 @@ def parse_hledger_format(price_history, commodity1, commodity2, append_space):
 
     for index, row in price_history.iterrows():
         prices.append(
-            f"P {index.date()} {commodity1} {commodity2}{' ' if append_space else ''}{round(row['Close'],2)}\n"
+            f"P {index.date()} {commodity1} {commodity2}{' ' if append_space else ''}{round(row['Close'], 2)}\n"
         )
 
     return prices
