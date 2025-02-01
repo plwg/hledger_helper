@@ -10,7 +10,9 @@ from .return_status import STATUS
 
 
 def fetch_hist_price(name, start_date):
-    price_history = yf.download(name, start=start_date, interval="1d", progress=False, multi_level_index=False)
+    price_history = yf.download(
+        name, start=start_date, interval="1d", progress=False, multi_level_index=False
+    )
 
     return price_history
 
