@@ -3,10 +3,18 @@ name = "hh"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
+authors = [
+    { name = "plwg", email = "56353330+plwg@users.noreply.github.com" }
+]
 requires-python = ">=3.11"
 dependencies = [
     "blessed>=1.20.0",
-    "pre-commit>=4.1.0",
-    "ruff>=0.9.3",
     "yfinance>=0.2.52",
 ]
+
+[project.scripts]
+hh = "hh:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
