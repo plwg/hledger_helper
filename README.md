@@ -3,8 +3,8 @@
 [Github](https://github.com/plwg/hledger_helper)
 
 Welcome to **hledger Helper (hhelper)**, a command-line tool for simplifying and enhancing your experience with [hledger](https://hledger.org/), the plain-text accounting tool. Whether you're managing transactions, cleaning up your journal, fetching commodity prices, or generating recurring transactions, **hhelper** is here to make your life easier.
-
 ---
+
 
 ## 🌟 Features
 
@@ -22,7 +22,6 @@ Welcome to **hledger Helper (hhelper)**, a command-line tool for simplifying and
 4. **Generate Recurring Transactions**
    Automatically generate recurring transactions based on your predefined rules. Save time by automating repetitive entries.
 
----
 
 ## 🚀 Getting Started
 
@@ -47,6 +46,13 @@ uv tool install hhelper
 hh
 ```
 
+## Screenshots
+
+![Main menu](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/dev/screenshots/main.png?raw=true)
+![Clean up journal](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/dev/screenshots/clean.png?raw=true)
+![Clearing transaction](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/dev/screenshots/clear.png?raw=true)
+![Fetching prices](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/dev/screenshots/fetch.png?raw=true)
+![Generating recurring transaction](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/dev/screenshots/gen_recur.png?raw=true)
 ---
 
 ## 🛠️ Usage
@@ -65,7 +71,6 @@ Once you've launched **hhelper**, you'll be greeted with a user-friendly menu wh
 4. **Generate Recurring Transactions**
    Generate recurring transactions based on a period expression. Preview the transactions before appending them to your journal.
 
----
 
 ## ⚙️ Configuration
 
@@ -86,24 +91,20 @@ commodity_pairs = [
 ]
 ```
 
----
 
 ## 📜 License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
----
 
 ## 🙌 Contributing
 
 Contributions are welcomed! If you have ideas for new features, improvements, or bug fixes, please open an issue or submit a pull request. Let's make **hhelper** even better together!
 
----
 
 ## 💬 Feedback
 
 If you have any questions, suggestions, or just want to say hello, feel free to open an issue or reach out to us. We'd love to hear from you!
 
 ---
-
 Happy accounting with **hledger Helper**! 🎉
