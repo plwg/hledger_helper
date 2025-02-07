@@ -14,8 +14,19 @@ from hh.ui.menu import menu
 
 
 def main():
-    with open(Path().home() / ".config" / "hh" / "config.toml", "rb") as f:
-        config = tomllib.load(f)
+    config_path = Path().home() / ".config" / "hh" / "configx.toml"
+
+    if config_path.is_file():
+        with open(config_path, "rb") as f:
+            config = tomllib.load(f)
+
+    else:
+        raise FileNotFoundError(
+            (
+                f"The config file is not found. Please create a config file at {config_path}.\n"
+                f"You can find an example config file at https://github.com/plwg/hledger_helper"
+            )
+        )
 
     paths = config["paths"]
 

@@ -1,14 +1,22 @@
 [paths]
 
+# All following files are assumed to be in this directory.
 directory = "~/finance/"
 
+# Main ledger file to work with
 ledger_file = "my.ledger"
+
+# Header information to be prepend to ledger after it is cleaned.
+# Needs to specify otehrwise header information will not be preserved.
 header_file = "my.ledger.header"
+# Where to download the price information to.
 price_file = "fetched_prices.txt"
+# A file to store recurring transaction.
 recurring_tx_file = "recur_tx.journal"
 
 [commodities]
-
+# Each symbol is a commodity that will be fetched by yfinance.
+# Other information are used to determined how the price info is presented once fetched.
 commodity_pairs = [
   { symbol = "ETH-USD", base_currency = "ETH", quote_currency = "USD", is_append_space = true },
   { symbol = "USDCNY=x", base_currency = "USD", quote_currency = "CNY", is_append_space = true },
