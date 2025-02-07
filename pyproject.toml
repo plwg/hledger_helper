@@ -1,7 +1,7 @@
 [project]
 name = "hh"
 version = "0.1.0"
-description = "Add your description here"
+description = "Helper Functions for hledger plain text accounting"
 readme = "README.md"
 authors = [
     { name = "plwg", email = "56353330+plwg@users.noreply.github.com" }

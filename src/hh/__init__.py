@@ -14,7 +14,7 @@ from hh.ui.menu import menu
 
 
 def main():
-    with open(Path(__file__).resolve().parent / "config" / "config.toml", "rb") as f:
+    with open(Path().home() / ".config" / "hh" / "config.toml", "rb") as f:
         config = tomllib.load(f)
 
     paths = config["paths"]
