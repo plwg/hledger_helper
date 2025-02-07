@@ -3,8 +3,6 @@
 [Github](https://github.com/plwg/hledger_helper)
 
 Welcome to **hledger Helper (hhelper)**, a command-line tool for simplifying and enhancing your experience with [hledger](https://hledger.org/), the plain-text accounting tool. Whether you're managing transactions, cleaning up your journal, fetching commodity prices, or generating recurring transactions, **hhelper** is here to make your life easier.
----
-
 
 ## 🌟 Features
 
