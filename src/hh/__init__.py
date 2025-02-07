@@ -14,7 +14,7 @@ from hh.ui.menu import menu
 
 
 def main():
-    config_path = Path().home() / ".config" / "hh" / "configx.toml"
+    config_path = Path().home() / ".config" / "hh" / "config.toml"
 
     if config_path.is_file():
         with open(config_path, "rb") as f:
