@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import subprocess
 
-from hh.helpers.align_posting import align_amounts
-from hh.helpers.check_valid_journal import check_valid_journal
-from hh.helpers.return_status import STATUS
+from hhelper.helpers.align_posting import align_amounts
+from hhelper.helpers.check_valid_journal import check_valid_journal
+from hhelper.helpers.return_status import STATUS
 
 
 def clean_up_journal(ledger_path, header_path, backup_ledger_path, term):

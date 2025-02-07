@@ -2,19 +2,19 @@ from pathlib import Path
 
 import tomllib
 from blessed import Terminal
-from hh.helpers.backup import backup_file
-from hh.helpers.options import (
+from hhelper.helpers.backup import backup_file
+from hhelper.helpers.options import (
     AvailableHelpers,
     get_main_menu_options,
     get_selected_option,
 )
-from hh.helpers.return_status import STATUS
-from hh.ui.display import press_key_to_continue
-from hh.ui.menu import menu
+from hhelper.helpers.return_status import STATUS
+from hhelper.ui.display import press_key_to_continue
+from hhelper.ui.menu import menu
 
 
 def main():
-    config_path = Path().home() / ".config" / "hh" / "config.toml"
+    config_path = Path().home() / ".config" / "hhelper" / "config.toml"
 
     if config_path.is_file():
         with open(config_path, "rb") as f:

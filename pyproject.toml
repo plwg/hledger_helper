@@ -1,5 +1,5 @@
 [project]
-name = "hh"
+name = "hhelper"
 version = "0.1.0"
 description = "Helper Functions for hledger plain text accounting"
 readme = "README.md"
@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-hh = "hh:main"
+hh = "hhelper:main"
 
 [build-system]
 requires = ["hatchling"]
