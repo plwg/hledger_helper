@@ -131,49 +131,48 @@ def update_line_status(lines, start_line):
         if line_number < start_line:
             pass
 
+        elif is_transaction_header(line) and not is_transaction_header_cleared(line):
+            line_status[line_number] = line_type.UNCLEARED_HEAD
+
+            uncleared_tx[line_number] = [line_type.UNCLEARED_HEAD]
+            uncleared_tx_text[line_number] = [line]
+
+            current_unclear_head = line_number
+
+            num_unclear += 1
+
+        elif (
+            line_number >= start_line + 1
+            and line_status[line_number - 1] == line_type.UNCLEARED_HEAD
+            and line.strip().startswith("; generated-transaction:")
+        ):
+            line_status[line_number] = line_type.GENERATED_COMMENTS
+
+            uncleared_tx[current_unclear_head].append(line_type.GENERATED_COMMENTS)
+            uncleared_tx_text[current_unclear_head].append(line)
+
+        elif (
+            line_number >= start_line + 1
+            and line_status[line_number - 1]
+            in {line_type.UNCLEARED_HEAD, line_type.UNCLEARED_BODY}
+            and re.match("\s+\w+", line)
+        ):
+            line_status[line_number] = line_type.UNCLEARED_BODY
+
+            uncleared_tx[current_unclear_head].append(line_type.UNCLEARED_BODY)
+            uncleared_tx_text[current_unclear_head].append(line)
+
+        elif (
+            line_number >= start_line + 2
+            and line_status[line_number - 2] == line_type.UNCLEARED_HEAD
+            and line_status[line_number - 1] == line_type.GENERATED_COMMENTS
+        ):
+            line_status[line_number] = line_type.UNCLEARED_BODY
+
+            uncleared_tx[current_unclear_head].append(line_type.UNCLEARED_BODY)
+            uncleared_tx_text[current_unclear_head].append(line)
         else:
-            if is_transaction_header(line) and not is_transaction_header_cleared(line):
-                line_status[line_number] = line_type.UNCLEARED_HEAD
-
-                uncleared_tx[line_number] = [line_type.UNCLEARED_HEAD]
-                uncleared_tx_text[line_number] = [line]
-
-                current_unclear_head = line_number
-
-                num_unclear += 1
-
-            elif (
-                line_number >= start_line + 1
-                and line_status[line_number - 1] == line_type.UNCLEARED_HEAD
-                and line.strip().startswith("; generated-transaction:")
-            ):
-                line_status[line_number] = line_type.GENERATED_COMMENTS
-
-                uncleared_tx[current_unclear_head].append(line_type.GENERATED_COMMENTS)
-                uncleared_tx_text[current_unclear_head].append(line)
-
-            elif (
-                line_number >= start_line + 1
-                and line_status[line_number - 1]
-                in {line_type.UNCLEARED_HEAD, line_type.UNCLEARED_BODY}
-                and re.match("\s+\w+", line)
-            ):
-                line_status[line_number] = line_type.UNCLEARED_BODY
-
-                uncleared_tx[current_unclear_head].append(line_type.UNCLEARED_BODY)
-                uncleared_tx_text[current_unclear_head].append(line)
-
-            elif (
-                line_number >= start_line + 2
-                and line_status[line_number - 2] == line_type.UNCLEARED_HEAD
-                and line_status[line_number - 1] == line_type.GENERATED_COMMENTS
-            ):
-                line_status[line_number] = line_type.UNCLEARED_BODY
-
-                uncleared_tx[current_unclear_head].append(line_type.UNCLEARED_BODY)
-                uncleared_tx_text[current_unclear_head].append(line)
-            else:
-                line_status[line_number] = line_type.CLEARED
+            line_status[line_number] = line_type.CLEARED
 
     uncleared_tx_text = {k: "".join(v) for k, v in uncleared_tx_text.items()}
 
@@ -239,7 +238,7 @@ def clear_tx(ledger_path, term):
             uncleared_tx_text = {
                 k: v
                 for k, v in uncleared_tx_text.items()
-                if re.search(search_string, v, flags=re.I)
+                if re.search(search_string, v, flags=re.IGNORECASE)
             }
 
             uncleared_tx = {

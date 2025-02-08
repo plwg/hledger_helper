@@ -2,7 +2,7 @@
 import re
 from collections import namedtuple
 from datetime import datetime as dt
-from datetime import timedelta as timedelta
+from datetime import timedelta
 
 import yfinance as yf
 

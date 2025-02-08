@@ -2,6 +2,7 @@ from pathlib import Path
 
 import tomllib
 from blessed import Terminal
+
 from hhelper.helpers.backup import backup_file
 from hhelper.helpers.options import (
     AvailableHelpers,
