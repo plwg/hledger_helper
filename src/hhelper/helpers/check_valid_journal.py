@@ -5,7 +5,11 @@ from functools import cache
 @cache
 def check_valid_journal(text):
     result = subprocess.run(
-        ["hledger", "check", "-f", "-"], input=text, text=True, capture_output=True
+        ["hledger", "check", "-f", "-"],
+        input=text,
+        text=True,
+        capture_output=True,
+        check=False,
     )
     err = result.stderr
 

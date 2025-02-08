@@ -36,6 +36,7 @@ def generate_recurring_tx(ledger_path, recurring_tx_path, term):
                 ],
                 capture_output=True,
                 text=True,
+                check=False,
             )
 
             if recurring_tx_result.stderr != "":

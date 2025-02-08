@@ -52,13 +52,14 @@ def clean_up_journal(ledger_path, header_path, backup_ledger_path, term):
         ["hledger", "print", "-x", "-f", str(ledger_path)],
         capture_output=True,
         text=True,
+        check=False,
     ).stdout
 
     # NOTE: There is no need to account for header here since it is not in the hledger print's output
     sorted_ledger = align_amounts(sorted_ledger)
 
     # Read the header file
-    with open(header_path, "r") as header_file:
+    with open(header_path) as header_file:
         header_content = header_file.read()
     print(term.bold_white(f"Read header file from {header_path}"))
 

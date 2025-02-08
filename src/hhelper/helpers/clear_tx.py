@@ -156,13 +156,7 @@ def update_line_status(lines, start_line):
             and line_status[line_number - 1]
             in {line_type.UNCLEARED_HEAD, line_type.UNCLEARED_BODY}
             and re.match("\s+\w+", line)
-        ):
-            line_status[line_number] = line_type.UNCLEARED_BODY
-
-            uncleared_tx[current_unclear_head].append(line_type.UNCLEARED_BODY)
-            uncleared_tx_text[current_unclear_head].append(line)
-
-        elif (
+        ) or (
             line_number >= start_line + 2
             and line_status[line_number - 2] == line_type.UNCLEARED_HEAD
             and line_status[line_number - 1] == line_type.GENERATED_COMMENTS
@@ -195,7 +189,7 @@ def print_help_string():
 
 
 def clear_tx(ledger_path, term):
-    with open(ledger_path, "r") as f:
+    with open(ledger_path) as f:
         lines = f.readlines()
 
     check_valid_journal("".join(lines))
