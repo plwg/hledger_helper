@@ -28,7 +28,7 @@ def generate_recurring_tx(ledger_path, recurring_tx_path, term):
             recurring_tx_result = subprocess.run(
                 [
                     "hledger",
-                    f"--file={str(recurring_tx_path)}",
+                    f"--file={recurring_tx_path!s}",
                     "print",
                     "--forecast",
                     "-p",
