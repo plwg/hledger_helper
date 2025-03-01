@@ -78,7 +78,7 @@ def fetch_price(price_file_path, commodity_pairs, term):
     )
     daily_price.sort()
 
-    with open(price_file_path, "w") as file_object:
+    with price_file_path.open("w") as file_object:
         file_object.writelines(daily_price)
 
     print(f"Prices successfully written to {price_file_path}")

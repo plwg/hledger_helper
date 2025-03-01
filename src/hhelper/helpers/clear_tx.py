@@ -187,7 +187,7 @@ def print_help_string():
 
 
 def clear_tx(ledger_path, term):
-    with open(ledger_path) as f:
+    with ledger_path.open() as f:
         lines = f.readlines()
 
     check_valid_journal("".join(lines))
@@ -306,7 +306,7 @@ def clear_tx(ledger_path, term):
                 if uncleared_tx[k][1] == line_type.GENERATED_COMMENTS:
                     del lines[k + 1]
 
-                with open(ledger_path, "w") as f:
+                with ledger_path.open("w") as f:
                     for line in lines.values():
                         f.write(line)
                 clear_screen_move_to_bottom(term)

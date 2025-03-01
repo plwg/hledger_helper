@@ -59,7 +59,7 @@ def clean_up_journal(ledger_path, header_path, backup_ledger_path, term):
     sorted_ledger = align_amounts(sorted_ledger)
 
     # Read the header file
-    with open(header_path) as header_file:
+    with header_path.open() as header_file:
         header_content = header_file.read()
     print(term.bold_white(f"Read header file from {header_path}"))
 
@@ -69,7 +69,7 @@ def clean_up_journal(ledger_path, header_path, backup_ledger_path, term):
     check_valid_journal(sorted_ledger)
 
     # Write the sorted ledger to the file
-    with open(ledger_path, "w") as ledger_file:
+    with ledger_path.open("w") as ledger_file:
         ledger_file.write(sorted_ledger)
 
     print(term.bold_white(f"Write sorted ledger to {ledger_path}"))

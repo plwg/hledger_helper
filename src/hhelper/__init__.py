@@ -18,7 +18,7 @@ def main():
     config_path = Path().home() / ".config" / "hhelper" / "config.toml"
 
     if config_path.is_file():
-        with open(config_path, "rb") as f:
+        with config_path.open("rb") as f:
             config = tomllib.load(f)
 
     else:

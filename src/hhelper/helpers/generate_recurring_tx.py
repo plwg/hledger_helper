@@ -54,7 +54,7 @@ def generate_recurring_tx(ledger_path, recurring_tx_path, term):
         decision = input(term.green("Append this to jorunal? (y/N/q): ")).lower()
 
         if decision in {"y", "yes"}:
-            with open(ledger_path, "a") as f:
+            with ledger_path.open("a") as f:
                 f.write(recur_tx)
 
         elif decision in {"", "n", "no", "q", "quit"}:
