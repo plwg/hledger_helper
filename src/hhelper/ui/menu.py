@@ -46,7 +46,7 @@ def menu(options, term):
     num_key_option = {str(i) for i in range(1, len_options + 1)}
 
     with term.cbreak(), term.hidden_cursor():
-        display_menu(options, term, len_options, selected_index)
+        display_menu(options, term, len_options, selected_index, is_jump=False)
         while True:
             key = term.inkey()
 
