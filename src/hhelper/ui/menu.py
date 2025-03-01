@@ -13,9 +13,8 @@ def format_options(options):
 
     max_len = max(len(o) for o in formatted_options) + 1
 
-    formatted_options = [o.ljust(max_len) for o in formatted_options]
-
-    return formatted_options
+    # Return formmated options
+    return [o.ljust(max_len) for o in formatted_options]
 
 
 def display_menu(options, term, len_options, selected_index, is_jump):

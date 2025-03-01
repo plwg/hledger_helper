@@ -10,11 +10,10 @@ from .return_status import STATUS
 
 
 def fetch_hist_price(name, start_date):
-    price_history = yf.download(
+    # Return price history
+    return yf.download(
         name, start=start_date, interval="1d", progress=False, multi_level_index=False
     )
-
-    return price_history
 
 
 def parse_hledger_format(price_history, commodity1, commodity2, append_space):
