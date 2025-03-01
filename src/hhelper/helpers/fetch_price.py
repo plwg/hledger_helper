@@ -73,10 +73,9 @@ def fetch_price(price_file_path, commodity_pairs, term):
     else:
         raise ValueError
 
-    for line in lines:
-        if date_pat.search(line).group(0) < start_date_str:
-            daily_price.append(line)
-
+    daily_price.extend(
+        line for line in lines if date_pat.search(line).group(0) < start_date_str
+    )
     daily_price.sort()
 
     with open(price_file_path, "w") as file_object:
