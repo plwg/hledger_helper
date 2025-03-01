@@ -23,10 +23,8 @@ def main():
 
     else:
         raise FileNotFoundError(
-            (
-                f"The config file is not found. Please create a config file at {config_path}.\n"
-                f"You can find an example config file at https://github.com/plwg/hledger_helper"
-            )
+            f"The config file is not found. Please create a config file at {config_path}.\n"
+            f"You can find an example config file at https://github.com/plwg/hledger_helper"
         )
 
     paths = config["paths"]
