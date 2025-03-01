@@ -153,7 +153,7 @@ def update_line_status(lines, start_line):
             line_number >= start_line + 1
             and line_status[line_number - 1]
             in {line_type.UNCLEARED_HEAD, line_type.UNCLEARED_BODY}
-            and re.match("\s+\w+", line)
+            and re.match(r"\s+\w+", line)
         ) or (
             line_number >= start_line + 2
             and line_status[line_number - 2] == line_type.UNCLEARED_HEAD
