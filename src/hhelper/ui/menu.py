@@ -56,11 +56,11 @@ def menu(options, term):
                 time.sleep(0.2)
                 break
 
-            elif key.name == "KEY_ENTER":
+            if key.name == "KEY_ENTER":
                 display_menu(options, term, len_options, selected_index, is_jump=True)
                 time.sleep(0.2)
                 break
-            elif key.name == "KEY_UP":
+            if key.name == "KEY_UP":
                 if selected_index == 0:
                     selected_index = end
 

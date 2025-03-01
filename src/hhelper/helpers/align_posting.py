@@ -7,8 +7,7 @@ def get_separator_length(line):
     matches = re.findall(r" {2,}", line.lstrip())
     if matches:
         return len(matches[0])
-    else:
-        return -1
+    return -1
 
 
 @cache

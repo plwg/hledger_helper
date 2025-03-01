@@ -30,17 +30,17 @@ def get_tx_decision(prefix, tx, term):
 
             if user_input in {"", "y", "yes"}:
                 return tx_decision_type.YES_CLEAR
-            elif user_input in {"n", "no"}:
+            if user_input in {"n", "no"}:
                 return tx_decision_type.DONT_CLEAR
-            elif user_input in {"q", "quit"}:
+            if user_input in {"q", "quit"}:
                 return tx_decision_type.QUIT
-            elif user_input in {"a", "all"}:
+            if user_input in {"a", "all"}:
                 return tx_decision_type.YES_CLEAR_ALL
-            elif user_input in {"v", "view"}:
+            if user_input in {"v", "view"}:
                 return tx_decision_type.VIEW_REST
-            elif user_input in {"r", "regex"}:
+            if user_input in {"r", "regex"}:
                 return tx_decision_type.REGEX
-            elif user_input in {"h", "help"}:
+            if user_input in {"h", "help"}:
                 return tx_decision_type.HELP
 
         except (KeyboardInterrupt, EOFError):
@@ -59,10 +59,9 @@ def get_regex_search_string(term):
 
         if search_string.lower() in {"q", "quit"}:
             return search_string_type.QUIT
-        elif search_string == "":
+        if search_string == "":
             return search_string_type.ALL
-        else:
-            return search_string
+        return search_string
     except (KeyboardInterrupt, EOFError):
         print("Interrupted")
         print("Bye!")
@@ -117,8 +116,7 @@ def is_transaction_header_cleared(text):
 
         return match
 
-    else:
-        return False
+    return False
 
 
 def update_line_status(lines, start_line):
@@ -226,7 +224,7 @@ def clear_tx(ledger_path, term):
 
         if search_string == search_string_type.QUIT:
             return STATUS.NOWAIT
-        elif search_string == search_string_type.ALL:
+        if search_string == search_string_type.ALL:
             pass
         elif search_string != search_string_type.ALL:
             uncleared_tx_text = {
@@ -267,14 +265,14 @@ def clear_tx(ledger_path, term):
                 index -= 1
                 continue
 
-            elif decision == tx_decision_type.REGEX:
+            if decision == tx_decision_type.REGEX:
                 clear_screen_move_to_bottom(term)
                 break
 
-            elif decision == tx_decision_type.QUIT:
+            if decision == tx_decision_type.QUIT:
                 return STATUS.NOWAIT
 
-            elif decision == tx_decision_type.DONT_CLEAR:
+            if decision == tx_decision_type.DONT_CLEAR:
                 clear_screen_move_to_bottom(term)
 
             elif decision == tx_decision_type.VIEW_REST:
