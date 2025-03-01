@@ -18,7 +18,7 @@ def format_options(options):
     return formatted_options
 
 
-def display_menu(options, term, len_options, selected_index, is_jump=False):
+def display_menu(options, term, len_options, selected_index, is_jump):
     print(term.home + term.move_y(term.height // 2 - len_options // 2 - 8))
     print_greeting(term)
 
@@ -66,13 +66,13 @@ def menu(options, term):
 
                 else:
                     selected_index -= 1
-                display_menu(options, term, len_options, selected_index)
+                display_menu(options, term, len_options, selected_index, is_jump=False)
             elif key.name == "KEY_DOWN":
                 if selected_index == end:
                     selected_index = 0
                 else:
                     selected_index += 1
-                display_menu(options, term, len_options, selected_index)
+                display_menu(options, term, len_options, selected_index, is_jump=False)
             else:
                 pass
 
