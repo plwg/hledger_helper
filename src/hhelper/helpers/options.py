@@ -42,4 +42,5 @@ def get_selected_option(option, term):
         if v.name == option:
             return k, v.function
 
-    raise ValueError(f"Invalid option: {option}")
+    msg = f"Invalid option: {option}"
+    raise ValueError(msg)

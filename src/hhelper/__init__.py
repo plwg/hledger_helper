@@ -22,10 +22,11 @@ def main():
             config = tomllib.load(f)
 
     else:
-        raise FileNotFoundError(
+        msg = (
             f"The config file is not found. Please create a config file at {config_path}.\n"
             f"You can find an example config file at https://github.com/plwg/hledger_helper"
         )
+        raise FileNotFoundError(msg)
 
     paths = config["paths"]
 
