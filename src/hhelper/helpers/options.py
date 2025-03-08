@@ -1,3 +1,4 @@
+import sys
 from collections import namedtuple
 from enum import Enum, auto
 
@@ -36,7 +37,7 @@ def get_selected_option(option, term):
     if option == "Exit":
         print(term.clear + term.home)
 
-        exit()
+        sys.exit()
 
     for k, v in _helpers.items():
         if v.name == option:

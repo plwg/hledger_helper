@@ -1,5 +1,6 @@
 import datetime
 import re
+import sys
 from collections import OrderedDict
 from enum import Enum
 from functools import cache
@@ -46,7 +47,7 @@ def get_tx_decision(prefix, tx, term):
         except (KeyboardInterrupt, EOFError):
             print("Interrupted")
             print("Bye!")
-            exit()
+            sys.exit()
 
 
 def get_regex_search_string(term):
@@ -65,7 +66,7 @@ def get_regex_search_string(term):
     except (KeyboardInterrupt, EOFError):
         print("Interrupted")
         print("Bye!")
-        exit()
+        sys.exit()
 
 
 @cache

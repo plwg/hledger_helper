@@ -1,4 +1,5 @@
 import subprocess
+import sys
 from functools import cache
 
 
@@ -15,4 +16,4 @@ def check_valid_journal(text):
 
     if err != "":
         print(err)
-        exit()
+        sys.exit()
