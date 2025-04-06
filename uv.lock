@@ -170,9 +170,6 @@ requires-dist = [
     { name = "yfinance", specifier = ">=0.2.54" },
 ]
 
-[package.metadata.requires-dev]
-dev = []
-
 [[package]]
 name = "idna"
 version = "3.10"
