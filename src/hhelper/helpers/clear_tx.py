@@ -196,6 +196,7 @@ def clear_tx(ledger_path, term):
     )
 
     unclear_query_pattern = re.compile(f"^({unclear_query_pattern})")
+    starting_line = 1
 
     while True:
         with ledger_path.open() as f:
@@ -207,7 +208,6 @@ def clear_tx(ledger_path, term):
             [(index, line) for index, line in enumerate(lines, start=1)]
         )
 
-        starting_line = 1
         clear_screen_move_to_bottom(term)
         uncleared_tx, uncleared_tx_text, uncleared_count = update_line_status(
             lines, starting_line
