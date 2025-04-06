@@ -1,4 +1,3 @@
-#!./.venv/bin/python
 import re
 from collections import namedtuple
 from datetime import datetime as dt
@@ -28,7 +27,7 @@ def parse_hledger_format(price_history, commodity1, commodity2, append_space):
 
 
 def fetch_price(price_file_path, commodity_pairs, term):
-    with open(price_file_path) as file_object:
+    with price_file_path.open() as file_object:
         lines = file_object.readlines()
 
     date_pat = re.compile(r"\d\d\d\d-\d\d-\d\d")

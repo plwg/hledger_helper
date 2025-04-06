@@ -1,5 +1,6 @@
 import datetime
 import re
+import sys
 from collections import OrderedDict
 from enum import Enum
 from functools import cache
@@ -46,7 +47,7 @@ def get_tx_decision(prefix, tx, term):
         except (KeyboardInterrupt, EOFError):
             print("Interrupted")
             print("Bye!")
-            exit()
+            sys.exit()
 
 
 def get_regex_search_string(term):
@@ -56,16 +57,16 @@ def get_regex_search_string(term):
                 'Regex query for transaction (leave blank for no filter, "q" or "quit" for menu): '
             )
         )
-
+    except (KeyboardInterrupt, EOFError):
+        print("Interrupted")
+        print("Bye!")
+        sys.exit()
+    else:
         if search_string.lower() in {"q", "quit"}:
             return search_string_type.QUIT
         if search_string == "":
             return search_string_type.ALL
         return search_string
-    except (KeyboardInterrupt, EOFError):
-        print("Interrupted")
-        print("Bye!")
-        exit()
 
 
 @cache
@@ -91,10 +92,10 @@ def is_transaction_header(text):
                 datetime.date(
                     year=2000, month=month, day=day
                 )  # Use a leap year to allow Feb 29
-
-            return True
         except (ValueError, TypeError):
             return False
+        else:
+            return True
     else:
         return False
 
@@ -186,15 +187,6 @@ def print_help_string():
 
 
 def clear_tx(ledger_path, term):
-    with ledger_path.open() as f:
-        lines = f.readlines()
-
-    check_valid_journal("".join(lines))
-
-    lines = OrderedDict([(index, line) for index, line in enumerate(lines, start=1)])
-
-    starting_line = 1
-
     unclear_query_pattern = "|".join(
         [
             r"((\d{4}-)?\d{1,2}-\d{1,2} )(! )?",
@@ -204,8 +196,18 @@ def clear_tx(ledger_path, term):
     )
 
     unclear_query_pattern = re.compile(f"^({unclear_query_pattern})")
+    starting_line = 1
 
     while True:
+        with ledger_path.open() as f:
+            lines = f.readlines()
+
+        check_valid_journal("".join(lines))
+
+        lines = OrderedDict(
+            [(index, line) for index, line in enumerate(lines, start=1)]
+        )
+
         clear_screen_move_to_bottom(term)
         uncleared_tx, uncleared_tx_text, uncleared_count = update_line_status(
             lines, starting_line
@@ -216,27 +218,27 @@ def clear_tx(ledger_path, term):
             return STATUS.WAIT
 
         print(term.yellow(f"{uncleared_count} uncleared transaction left."))
-        starting_line = min(uncleared_tx.keys())
 
-        search_string = get_regex_search_string(term)
-        clear_screen_move_to_bottom(term)
+        while True:
+            search_string = get_regex_search_string(term)
+            clear_screen_move_to_bottom(term)
 
-        if search_string == search_string_type.QUIT:
-            return STATUS.NOWAIT
-        if search_string == search_string_type.ALL:
-            pass
-        elif search_string != search_string_type.ALL:
-            uncleared_tx_text = {
-                k: v
-                for k, v in uncleared_tx_text.items()
-                if re.search(search_string, v, flags=re.IGNORECASE)
-            }
+            if search_string == search_string_type.QUIT:
+                return STATUS.NOWAIT
+            if search_string == search_string_type.ALL:
+                break
+            elif search_string != search_string_type.ALL:
+                uncleared_tx_text = {
+                    k: v
+                    for k, v in uncleared_tx_text.items()
+                    if re.search(search_string, v, flags=re.IGNORECASE)
+                }
 
-            uncleared_tx = {
-                k: v for k, v in uncleared_tx.items() if k in uncleared_tx_text
-            }
-        else:
-            raise ValueError
+                uncleared_tx = {
+                    k: v for k, v in uncleared_tx.items() if k in uncleared_tx_text
+                }
+
+                break
 
         keys = list(uncleared_tx_text.keys())
         total_num = len(keys)
@@ -303,7 +305,7 @@ def clear_tx(ledger_path, term):
                 lines[k] = unclear_query_pattern.sub(r"\2* ", lines[k])
 
                 if uncleared_tx[k][1] == line_type.GENERATED_COMMENTS:
-                    del lines[k + 1]
+                    lines.pop(k + 1)
 
                 with ledger_path.open("w") as f:
                     for line in lines.values():
@@ -311,7 +313,3 @@ def clear_tx(ledger_path, term):
                 clear_screen_move_to_bottom(term)
             else:
                 raise NotImplementedError
-
-        lines = OrderedDict(
-            [(index, lines[k]) for index, k in enumerate(lines.keys(), start=1)]
-        )

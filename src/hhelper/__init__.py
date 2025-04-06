@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import tomllib
+import toml
 from blessed import Terminal
 
 from hhelper.helpers.backup import backup_file
@@ -17,15 +17,17 @@ from hhelper.ui.menu import menu
 def main():
     config_path = Path().home() / ".config" / "hhelper" / "config.toml"
 
-    if config_path.is_file():
-        with config_path.open("rb") as f:
-            config = tomllib.load(f)
+    try:
+        config = toml.load(config_path)
 
-    else:
-        raise FileNotFoundError(
+    except FileNotFoundError:
+        msg = (
             f"The config file is not found. Please create a config file at {config_path}.\n"
             f"You can find an example config file at https://github.com/plwg/hledger_helper"
         )
+        print(msg)
+
+        return
 
     paths = config["paths"]
 
