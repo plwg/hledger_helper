@@ -305,7 +305,7 @@ def clear_tx(ledger_path, term):
                 lines[k] = unclear_query_pattern.sub(r"\2* ", lines[k])
 
                 if uncleared_tx[k][1] == line_type.GENERATED_COMMENTS:
-                    del lines[k + 1]
+                    lines.pop(k + 1)
 
                 with ledger_path.open("w") as f:
                     for line in lines.values():
