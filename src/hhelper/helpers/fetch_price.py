@@ -1,4 +1,3 @@
-#!./.venv/bin/python
 import re
 from collections import namedtuple
 from datetime import datetime as dt

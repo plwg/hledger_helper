@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import subprocess
 
 from hhelper.helpers.align_posting import align_amounts
