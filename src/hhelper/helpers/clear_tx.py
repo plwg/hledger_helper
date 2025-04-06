@@ -57,16 +57,16 @@ def get_regex_search_string(term):
                 'Regex query for transaction (leave blank for no filter, "q" or "quit" for menu): '
             )
         )
-
+    except (KeyboardInterrupt, EOFError):
+        print("Interrupted")
+        print("Bye!")
+        sys.exit()
+    else:
         if search_string.lower() in {"q", "quit"}:
             return search_string_type.QUIT
         if search_string == "":
             return search_string_type.ALL
         return search_string
-    except (KeyboardInterrupt, EOFError):
-        print("Interrupted")
-        print("Bye!")
-        sys.exit()
 
 
 @cache
@@ -92,10 +92,10 @@ def is_transaction_header(text):
                 datetime.date(
                     year=2000, month=month, day=day
                 )  # Use a leap year to allow Feb 29
-
-            return True
         except (ValueError, TypeError):
             return False
+        else:
+            return True
     else:
         return False
 
