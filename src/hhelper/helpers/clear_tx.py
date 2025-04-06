@@ -219,26 +219,25 @@ def clear_tx(ledger_path, term):
 
         print(term.yellow(f"{uncleared_count} uncleared transaction left."))
 
-        while True:
-            search_string = get_regex_search_string(term)
-            clear_screen_move_to_bottom(term)
+        search_string = get_regex_search_string(term)
+        clear_screen_move_to_bottom(term)
 
-            if search_string == search_string_type.QUIT:
-                return STATUS.NOWAIT
-            if search_string == search_string_type.ALL:
-                break
-            elif search_string != search_string_type.ALL:
-                uncleared_tx_text = {
-                    k: v
-                    for k, v in uncleared_tx_text.items()
-                    if re.search(search_string, v, flags=re.IGNORECASE)
-                }
+        if search_string == search_string_type.QUIT:
+            return STATUS.NOWAIT
+        elif search_string == search_string_type.ALL:
+            pass
+        elif isinstance(search_string, str):
+            uncleared_tx_text = {
+                k: v
+                for k, v in uncleared_tx_text.items()
+                if re.search(search_string, v, flags=re.IGNORECASE)
+            }
 
-                uncleared_tx = {
-                    k: v for k, v in uncleared_tx.items() if k in uncleared_tx_text
-                }
-
-                break
+            uncleared_tx = {
+                k: v for k, v in uncleared_tx.items() if k in uncleared_tx_text
+            }
+        else:
+            raise ValueError
 
         keys = list(uncleared_tx_text.keys())
         total_num = len(keys)
