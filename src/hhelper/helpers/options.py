@@ -1,13 +1,23 @@
+from __future__ import annotations
+
 import sys
-from collections import namedtuple
+from dataclasses import dataclass
 from enum import Enum, auto
+from typing import TYPE_CHECKING, Callable, cast
 
 from hhelper.helpers.clean_up_journal import clean_up_journal
 from hhelper.helpers.clear_tx import clear_tx
 from hhelper.helpers.fetch_price import fetch_price
 from hhelper.helpers.generate_recurring_tx import generate_recurring_tx
 
-Helper = namedtuple("Helper", ["name", "function"])
+if TYPE_CHECKING:
+    from blessed import Terminal
+
+
+@dataclass(frozen=True)
+class Helper:
+    name: str
+    function: Callable
 
 
 class AvailableHelpers(Enum):
@@ -18,22 +28,26 @@ class AvailableHelpers(Enum):
 
 
 _helpers = {
-    AvailableHelpers.MARK_CLEAR: Helper("Mark Transactions as Cleared", clear_tx),
-    AvailableHelpers.CLEAN_UP: Helper("Clean Up Journal", clean_up_journal),
-    AvailableHelpers.FETCH_PRICE: Helper("Fetch Prices", fetch_price),
+    AvailableHelpers.MARK_CLEAR: Helper(
+        name="Mark Transactions as Cleared", function=clear_tx
+    ),
+    AvailableHelpers.CLEAN_UP: Helper(
+        name="Clean Up Journal", function=clean_up_journal
+    ),
+    AvailableHelpers.FETCH_PRICE: Helper(name="Fetch Prices", function=fetch_price),
     AvailableHelpers.GEN_RECUR: Helper(
-        "Generate Recurring Transactions", generate_recurring_tx
+        name="Generate Recurring Transactions", function=generate_recurring_tx
     ),
 }
 
 
-def get_main_menu_options():
+def get_main_menu_options() -> tuple[str, ...]:
     menu_options = sorted(helper.name for helper in _helpers.values())
     menu_options.append("Exit")
     return tuple(menu_options)
 
 
-def get_selected_option(option, term):
+def get_selected_option(option: str, term: Terminal) -> tuple[AvailableHelpers, Helper]:
     if option == "Exit":
         print(term.clear + term.home)
 
@@ -41,7 +55,7 @@ def get_selected_option(option, term):
 
     for k, v in _helpers.items():
         if v.name == option:
-            return k, v.function
+            return k, cast("Helper", v.function)
 
     msg = f"Invalid option: {option}"
     raise ValueError(msg)

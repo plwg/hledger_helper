@@ -1,14 +1,30 @@
+from __future__ import annotations
+
 import re
-from collections import namedtuple
-from datetime import datetime as dt
-from datetime import timedelta
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, cast
 
 import yfinance as yf
 
-from .return_status import STATUS
+from hhelper.helpers.return_status import STATUS
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    import pandas as pd
+    from blessed import Terminal
 
 
-def fetch_hist_price(name, start_date):
+@dataclass
+class CommodityPair:
+    symbol: str
+    base_currency: str
+    quote_currency: str
+    is_append_space: bool
+
+
+def fetch_hist_price(name: str, start_date: datetime) -> pd.DataFrame:
     # Return price history
     return yf.download(
         name,
@@ -20,36 +36,46 @@ def fetch_hist_price(name, start_date):
     )
 
 
-def parse_hledger_format(price_history, commodity1, commodity2, append_space):
+def parse_hledger_format(
+    price_history: pd.DataFrame, commodity1: str, commodity2: str, append_space: bool
+) -> list[str]:
     prices = []
 
     for index, row in price_history.iterrows():
+        index = cast("pd.Timestamp", index)
+
         prices.append(
-            f"P {index.date()} {commodity1} {commodity2}{' ' if append_space else ''}{round(row['Close'], 2)}\n"
+            f"P {index.date()} {commodity1} {commodity2}{' ' if append_space else ''}{round(cast('float', row['Close']), 2)}\n"
         )
 
     return prices
 
 
-def fetch_price(price_file_path, commodity_pairs, term):
+def fetch_price(
+    price_file_path: Path, commodity_pairs: list[dict[str, str]], term: Terminal
+) -> STATUS:
     with price_file_path.open() as file_object:
         lines = file_object.readlines()
 
     date_pat = re.compile(r"\d\d\d\d-\d\d-\d\d")
 
-    latest_date = max(date_pat.search(line).group(0) for line in lines)
+    dates = []
+    for line in lines:
+        line_date = date_pat.search(line)
 
-    latest_date = dt.strptime(latest_date, "%Y-%m-%d")
+        if line_date is not None:
+            dates.append(line_date.group(0))
+    latest_date = max(dates)
+
+    latest_date = datetime.strptime(latest_date, "%Y-%m-%d")
     start_date = latest_date - timedelta(days=30)
     start_date_str = str(start_date)[:10]
 
     daily_price = []
 
-    CommodityPair = namedtuple("CommodityPair", commodity_pairs[0])
+    commodity_pairs_list = [CommodityPair(**cp) for cp in commodity_pairs]  # type: ignore [missing-argument]
 
-    commodity_pairs = [CommodityPair(**cp) for cp in commodity_pairs]
-
-    for pair in commodity_pairs:
+    for pair in commodity_pairs_list:
         daily_price.extend(
             parse_hledger_format(
                 fetch_hist_price(pair.symbol, start_date),
@@ -59,11 +85,19 @@ def fetch_price(price_file_path, commodity_pairs, term):
             )
         )
 
-    latest_date = max(date_pat.search(line).group(0) for line in daily_price)
+    dp_dates = []
+    for dp in daily_price:
+        dp_date = date_pat.search(dp)
+
+        if dp_date is not None:
+            dp_dates.append(dp_date.group(0))
+    latest_dp_date = max(dp_dates)
 
     print(term.clear + term.home)
     print("".join(daily_price))
-    print(f"Fetched {len(daily_price)} postings from {start_date_str} to {latest_date}")
+    print(
+        f"Fetched {len(daily_price)} postings from {start_date_str} to {latest_dp_date}"
+    )
 
     descision = input(term.green("Write to file? (Y/n/q): ")).lower()
 
@@ -76,9 +110,12 @@ def fetch_price(price_file_path, commodity_pairs, term):
     else:
         raise ValueError
 
-    daily_price.extend(
-        line for line in lines if date_pat.search(line).group(0) < start_date_str
-    )
+    for line in lines:
+        date = date_pat.search(line)
+
+        if date is not None and date.group(0) < start_date_str:
+            daily_price.append(line)
+
     daily_price.sort()
 
     with price_file_path.open("w") as file_object:

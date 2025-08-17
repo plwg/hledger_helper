@@ -1,26 +1,46 @@
+from __future__ import annotations
+
 import datetime
 import re
 import sys
 from collections import OrderedDict
-from enum import Enum
+from enum import Enum, auto
 from functools import cache
+from typing import TYPE_CHECKING
 
 from hhelper.helpers.check_valid_journal import check_valid_journal
 from hhelper.helpers.return_status import STATUS
 from hhelper.ui.display import clear_screen_move_to_bottom, press_key_to_continue
 
-line_type = Enum(
-    "Type",
-    ["CLEARED", "UNCLEARED_HEAD", "UNCLEARED_BODY", "GENERATED_COMMENTS"],
-)
-search_string_type = Enum("Type", ["ALL", "QUIT"])
-tx_decision_type = Enum(
-    "Type",
-    ["YES_CLEAR", "YES_CLEAR_ALL", "DONT_CLEAR", "VIEW_REST", "QUIT", "REGEX", "HELP"],
-)
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from blessed import Terminal
 
 
-def get_tx_decision(prefix, tx, term):
+class LineType(Enum):
+    CLEARED = auto()
+    UNCLEARED_HEAD = auto()
+    UNCLEARED_BODY = auto()
+    GENERATED_COMMENTS = auto()
+
+
+class SearchStringType(Enum):
+    ALL = auto()
+    QUIT = auto()
+
+
+class TxDecisionType(Enum):
+    YES_CLEAR = auto()
+    YES_CLEAR_ALL = auto()
+    DONT_CLEAR = auto()
+    VIEW_REST = auto()
+    QUIT = auto()
+    REGEX = auto()
+    HELP = auto()
+
+
+def get_tx_decision(prefix: str, tx: str, term: Terminal) -> TxDecisionType:
     while True:
         print(prefix)
         print(tx, end="", flush=True)
@@ -30,19 +50,19 @@ def get_tx_decision(prefix, tx, term):
             ).lower()
 
             if user_input in {"", "y", "yes"}:
-                return tx_decision_type.YES_CLEAR
+                return TxDecisionType.YES_CLEAR
             if user_input in {"n", "no"}:
-                return tx_decision_type.DONT_CLEAR
+                return TxDecisionType.DONT_CLEAR
             if user_input in {"q", "quit"}:
-                return tx_decision_type.QUIT
+                return TxDecisionType.QUIT
             if user_input in {"a", "all"}:
-                return tx_decision_type.YES_CLEAR_ALL
+                return TxDecisionType.YES_CLEAR_ALL
             if user_input in {"v", "view"}:
-                return tx_decision_type.VIEW_REST
+                return TxDecisionType.VIEW_REST
             if user_input in {"r", "regex"}:
-                return tx_decision_type.REGEX
+                return TxDecisionType.REGEX
             if user_input in {"h", "help"}:
-                return tx_decision_type.HELP
+                return TxDecisionType.HELP
 
         except (KeyboardInterrupt, EOFError):
             print("Interrupted")
@@ -50,7 +70,7 @@ def get_tx_decision(prefix, tx, term):
             sys.exit()
 
 
-def get_regex_search_string(term):
+def get_regex_search_string(term: Terminal) -> str | SearchStringType:
     try:
         search_string = input(
             term.green(
@@ -63,14 +83,14 @@ def get_regex_search_string(term):
         sys.exit()
     else:
         if search_string.lower() in {"q", "quit"}:
-            return search_string_type.QUIT
+            return SearchStringType.QUIT
         if search_string == "":
-            return search_string_type.ALL
+            return SearchStringType.ALL
         return search_string
 
 
 @cache
-def is_transaction_header(text):
+def is_transaction_header(text: str) -> bool:
     match = (
         re.match(r"((?P<year>\d{4})-)?(?P<month>\d{1,2})-(?P<day>\d{1,2}) .*", text)
         or re.match(
@@ -101,10 +121,10 @@ def is_transaction_header(text):
 
 
 @cache
-def is_transaction_header_cleared(text):
+def is_transaction_header_cleared(text: str) -> bool:
     if is_transaction_header(text):
         # Return match
-        return (
+        match = (
             re.match(
                 r"((?P<year>\d{4})-)?(?P<month>\d{1,2})-(?P<day>\d{1,2}) \* ", text
             )
@@ -116,23 +136,29 @@ def is_transaction_header_cleared(text):
             )
         )
 
+        return match is not None
+
     return False
 
 
-def update_line_status(lines, start_line):
+def update_line_status(
+    lines: dict[int, str], start_line: int
+) -> tuple[dict[int, list[LineType]], dict[int, str], int]:
     line_status = {}
     uncleared_tx = {}
     uncleared_tx_text = {}
     num_unclear = 0
+
+    current_unclear_head = 0
 
     for line_number, line in lines.items():
         if line_number < start_line:
             pass
 
         elif is_transaction_header(line) and not is_transaction_header_cleared(line):
-            line_status[line_number] = line_type.UNCLEARED_HEAD
+            line_status[line_number] = LineType.UNCLEARED_HEAD
 
-            uncleared_tx[line_number] = [line_type.UNCLEARED_HEAD]
+            uncleared_tx[line_number] = [LineType.UNCLEARED_HEAD]
             uncleared_tx_text[line_number] = [line]
 
             current_unclear_head = line_number
@@ -141,37 +167,37 @@ def update_line_status(lines, start_line):
 
         elif (
             line_number >= start_line + 1
-            and line_status[line_number - 1] == line_type.UNCLEARED_HEAD
+            and line_status[line_number - 1] == LineType.UNCLEARED_HEAD
             and line.strip().startswith("; generated-transaction:")
         ):
-            line_status[line_number] = line_type.GENERATED_COMMENTS
+            line_status[line_number] = LineType.GENERATED_COMMENTS
 
-            uncleared_tx[current_unclear_head].append(line_type.GENERATED_COMMENTS)
+            uncleared_tx[current_unclear_head].append(LineType.GENERATED_COMMENTS)
             uncleared_tx_text[current_unclear_head].append(line)
 
         elif (
             line_number >= start_line + 1
             and line_status[line_number - 1]
-            in {line_type.UNCLEARED_HEAD, line_type.UNCLEARED_BODY}
+            in {LineType.UNCLEARED_HEAD, LineType.UNCLEARED_BODY}
             and re.match(r"\s+\w+", line)
         ) or (
             line_number >= start_line + 2
-            and line_status[line_number - 2] == line_type.UNCLEARED_HEAD
-            and line_status[line_number - 1] == line_type.GENERATED_COMMENTS
+            and line_status[line_number - 2] == LineType.UNCLEARED_HEAD
+            and line_status[line_number - 1] == LineType.GENERATED_COMMENTS
         ):
-            line_status[line_number] = line_type.UNCLEARED_BODY
+            line_status[line_number] = LineType.UNCLEARED_BODY
 
-            uncleared_tx[current_unclear_head].append(line_type.UNCLEARED_BODY)
+            uncleared_tx[current_unclear_head].append(LineType.UNCLEARED_BODY)
             uncleared_tx_text[current_unclear_head].append(line)
         else:
-            line_status[line_number] = line_type.CLEARED
+            line_status[line_number] = LineType.CLEARED
 
     uncleared_tx_text = {k: "".join(v) for k, v in uncleared_tx_text.items()}
 
     return uncleared_tx, uncleared_tx_text, num_unclear
 
 
-def print_help_string():
+def print_help_string() -> None:
     print(
         "y/yes: clear current transaction",
         "n/no: don't clear current transaction",
@@ -186,7 +212,7 @@ def print_help_string():
     )
 
 
-def clear_tx(ledger_path, term):
+def clear_tx(ledger_path: Path, term: Terminal) -> STATUS:
     unclear_query_pattern = "|".join(
         [
             r"((\d{4}-)?\d{1,2}-\d{1,2} )(! )?",
@@ -204,13 +230,13 @@ def clear_tx(ledger_path, term):
 
         check_valid_journal("".join(lines))
 
-        lines = OrderedDict(
+        line_dict = OrderedDict(
             [(index, line) for index, line in enumerate(lines, start=1)]
         )
 
         clear_screen_move_to_bottom(term)
         uncleared_tx, uncleared_tx_text, uncleared_count = update_line_status(
-            lines, starting_line
+            line_dict, starting_line
         )
 
         if uncleared_count == 0:
@@ -222,9 +248,9 @@ def clear_tx(ledger_path, term):
         search_string = get_regex_search_string(term)
         clear_screen_move_to_bottom(term)
 
-        if search_string == search_string_type.QUIT:
+        if search_string == SearchStringType.QUIT:
             return STATUS.NOWAIT
-        elif search_string == search_string_type.ALL:
+        if search_string == SearchStringType.ALL:
             pass
         elif isinstance(search_string, str):
             uncleared_tx_text = {
@@ -252,11 +278,11 @@ def clear_tx(ledger_path, term):
             index += 1
 
             if clear_all_flag:
-                decision = tx_decision_type.YES_CLEAR_ALL
+                decision = TxDecisionType.YES_CLEAR_ALL
             else:
                 decision = get_tx_decision(f"[{index}/{total_num}]", v, term)
 
-            if decision == tx_decision_type.HELP:
+            if decision == TxDecisionType.HELP:
                 clear_screen_move_to_bottom(term)
                 print_help_string()
                 press_key_to_continue(term)
@@ -265,17 +291,17 @@ def clear_tx(ledger_path, term):
                 index -= 1
                 continue
 
-            if decision == tx_decision_type.REGEX:
+            if decision == TxDecisionType.REGEX:
                 clear_screen_move_to_bottom(term)
                 break
 
-            if decision == tx_decision_type.QUIT:
+            if decision == TxDecisionType.QUIT:
                 return STATUS.NOWAIT
 
-            if decision == tx_decision_type.DONT_CLEAR:
+            if decision == TxDecisionType.DONT_CLEAR:
                 clear_screen_move_to_bottom(term)
 
-            elif decision == tx_decision_type.VIEW_REST:
+            elif decision == TxDecisionType.VIEW_REST:
                 remaining_items = [
                     value for key, value in uncleared_tx_text.items() if key >= k
                 ]
@@ -295,19 +321,19 @@ def clear_tx(ledger_path, term):
                 index -= 1
 
             elif decision in {
-                tx_decision_type.YES_CLEAR,
-                tx_decision_type.YES_CLEAR_ALL,
+                TxDecisionType.YES_CLEAR,
+                TxDecisionType.YES_CLEAR_ALL,
             }:
-                if decision == tx_decision_type.YES_CLEAR_ALL:
+                if decision == TxDecisionType.YES_CLEAR_ALL:
                     clear_all_flag = True
 
-                lines[k] = unclear_query_pattern.sub(r"\2* ", lines[k])
+                line_dict[k] = unclear_query_pattern.sub(r"\2* ", line_dict[k])
 
-                if uncleared_tx[k][1] == line_type.GENERATED_COMMENTS:
-                    lines.pop(k + 1)
+                if uncleared_tx[k][1] == LineType.GENERATED_COMMENTS:
+                    line_dict.pop(k + 1)
 
                 with ledger_path.open("w") as f:
-                    for line in lines.values():
+                    for line in line_dict.values():
                         f.write(line)
                 clear_screen_move_to_bottom(term)
             else:
