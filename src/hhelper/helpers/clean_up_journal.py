@@ -1,11 +1,21 @@
+from __future__ import annotations
+
 import subprocess
+from typing import TYPE_CHECKING
 
 from hhelper.helpers.align_posting import align_amounts
 from hhelper.helpers.check_valid_journal import check_valid_journal
 from hhelper.helpers.return_status import STATUS
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
-def clean_up_journal(ledger_path, header_path, backup_ledger_path, term):
+    from blessed import Terminal
+
+
+def clean_up_journal(
+    ledger_path: Path, header_path: Path, backup_ledger_path: Path, term: Terminal
+) -> STATUS:
     with term.hidden_cursor():
         warning_message = (
             "Relying on hledger print, cleaning up has the following behaviors:",

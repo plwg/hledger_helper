@@ -1,10 +1,20 @@
+from __future__ import annotations
+
 import subprocess
+from typing import TYPE_CHECKING
 
 from hhelper.helpers.return_status import STATUS
 from hhelper.ui.display import press_key_to_continue
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
-def generate_recurring_tx(ledger_path, recurring_tx_path, term):
+    from blessed import Terminal
+
+
+def generate_recurring_tx(
+    ledger_path: Path, recurring_tx_path: Path, term: Terminal
+) -> STATUS:
     while True:
         print(term.clear + term.home)
         print(term.move_y(term.height))

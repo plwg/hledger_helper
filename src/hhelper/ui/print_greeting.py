@@ -1,4 +1,12 @@
-def print_greeting(term):
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from blessed import Terminal
+
+
+def print_greeting(term: Terminal) -> None:
     greeting_message = (
         r" _   _ _          _                   _   _      _                 ",
         r"| | | | |        | |                 | | | |    | |                ",

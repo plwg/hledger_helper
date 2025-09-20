@@ -1,11 +1,19 @@
+from __future__ import annotations
+
 import time
 from functools import lru_cache
+from typing import TYPE_CHECKING
 
 from hhelper.ui.print_greeting import print_greeting
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from blessed import Terminal
+
 
 @lru_cache(maxsize=1)
-def format_options(options):
+def format_options(options: Iterable[str]) -> list[str]:
     formatted_options = []
 
     for index, option in enumerate(options):
@@ -17,7 +25,13 @@ def format_options(options):
     return [o.ljust(max_len) for o in formatted_options]
 
 
-def display_menu(options, term, len_options, selected_index, is_jump):
+def display_menu(
+    options: tuple[str, ...],
+    term: Terminal,
+    len_options: int,
+    selected_index: int,
+    is_jump: bool,
+) -> None:
     print(term.home + term.move_y(term.height // 2 - len_options // 2 - 8))
     print_greeting(term)
 
@@ -34,7 +48,7 @@ def display_menu(options, term, len_options, selected_index, is_jump):
             print(term.center(term.white(option)))
 
 
-def menu(options, term):
+def menu(options: tuple[str, ...], term: Terminal) -> str:
     print(term.clear + term.home)
 
     selected_index = 0

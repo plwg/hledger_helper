@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Callable, cast
 
 import toml
 from blessed import Terminal
@@ -14,7 +15,7 @@ from hhelper.ui.display import press_key_to_continue
 from hhelper.ui.menu import menu
 
 
-def main():
+def main() -> None:
     config_path = Path().home() / ".config" / "hhelper" / "config.toml"
 
     try:
@@ -45,6 +46,8 @@ def main():
 
         name, helper = get_selected_option(selection, term)
 
+        helper = cast("Callable", helper)
+
         print(term.clear + term.home)
         print(term.move_y(term.height))
 
@@ -59,9 +62,9 @@ def main():
             status = helper(ledger_path, term)
 
         elif name == AvailableHelpers.CLEAN_UP:
-            bak_up_path = backup_file(ledger_path)
+            back_up_path = backup_file(ledger_path)
             backup_file(header_path)
-            status = helper(ledger_path, header_path, bak_up_path, term)
+            status = helper(ledger_path, header_path, back_up_path, term)
 
         elif name == AvailableHelpers.GEN_RECUR:
             backup_file(ledger_path)

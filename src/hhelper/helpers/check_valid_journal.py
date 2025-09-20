@@ -4,7 +4,7 @@ from functools import cache
 
 
 @cache
-def check_valid_journal(text):
+def check_valid_journal(text: str) -> None:
     result = subprocess.run(
         ["hledger", "check", "-f", "-"],
         input=text,
