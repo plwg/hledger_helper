@@ -71,22 +71,29 @@ def get_tx_decision(prefix: str, tx: str, term: Terminal) -> TxDecisionType:
 
 
 def get_regex_search_string(term: Terminal) -> str | SearchStringType:
-    try:
-        search_string = input(
-            term.green(
-                'Regex query for transaction (leave blank for no filter, "q" or "quit" for menu): '
+    while True:
+        try:
+            search_string = input(
+                term.green(
+                    'Regex query for transaction (leave blank for no filter, "q" or "quit" for menu): '
+                )
             )
-        )
-    except (KeyboardInterrupt, EOFError):
-        print("Interrupted")
-        print("Bye!")
-        sys.exit()
-    else:
+        except (KeyboardInterrupt, EOFError):
+            print("Interrupted")
+            print("Bye!")
+            sys.exit()
+
         if search_string.lower() in {"q", "quit"}:
             return SearchStringType.QUIT
         if search_string == "":
             return SearchStringType.ALL
-        return search_string
+
+        try:
+            re.compile(search_string)
+        except re.error as e:
+            print(term.red(f"Invalid regex: {e}"))
+        else:
+            return search_string
 
 
 @cache

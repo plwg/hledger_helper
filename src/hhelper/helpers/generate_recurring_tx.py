@@ -4,7 +4,7 @@ import subprocess
 from typing import TYPE_CHECKING
 
 from hhelper.helpers.return_status import STATUS
-from hhelper.ui.display import press_key_to_continue
+from hhelper.ui.display import ask_yes_no, press_key_to_continue
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -61,14 +61,6 @@ def generate_recurring_tx(
 
         print(recur_tx)
 
-        decision = input(term.green("Append this to jorunal? (y/N/q): ")).lower()
-
-        if decision in {"y", "yes"}:
+        if ask_yes_no(term, "Append this to journal? (y/N/q): ", default=False):
             with ledger_path.open("a") as f:
                 f.write(recur_tx)
-
-        elif decision in {"", "n", "no", "q", "quit"}:
-            continue
-
-        else:
-            raise ValueError

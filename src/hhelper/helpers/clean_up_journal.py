@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from hhelper.helpers.align_posting import align_amounts
 from hhelper.helpers.check_valid_journal import check_valid_journal
 from hhelper.helpers.return_status import STATUS
+from hhelper.ui.display import ask_yes_no
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -43,16 +44,8 @@ def clean_up_journal(
 
         print(term.move_y(term.height))
 
-        descision = input(term.green("Continue? (Y/n/q): ")).lower()
-
-        if descision in {"", "y", "yes"}:
-            pass
-
-        elif descision in {"n", "no", "q", "quit"}:
+        if not ask_yes_no(term, "Continue? (Y/n/q): ", default=True):
             return STATUS.NOWAIT
-
-        else:
-            raise ValueError
 
     print(term.clear + term.move_y(term.height))
 

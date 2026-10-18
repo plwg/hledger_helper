@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, cast
 import yfinance as yf
 
 from hhelper.helpers.return_status import STATUS
+from hhelper.ui.display import ask_yes_no
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -114,16 +115,8 @@ def fetch_price(
         f"Fetched {len(daily_price)} postings from {start_date_str} to {latest_dp_date}"
     )
 
-    descision = input(term.green("Write to file? (Y/n/q): ")).lower()
-
-    if descision in {"", "y", "yes"}:
-        pass
-
-    elif descision in {"n", "no", "q", "quit"}:
+    if not ask_yes_no(term, "Write to file? (Y/n/q): ", default=True):
         return STATUS.NOWAIT
-
-    else:
-        raise ValueError
 
     # Lines without a date (comments, directives) are kept at the top, in order
     undated_lines = []
