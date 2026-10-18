@@ -227,15 +227,8 @@ def print_help_string() -> None:
 
 
 def clear_tx(ledger_path: Path, term: Terminal) -> STATUS:
-    unclear_query_pattern = "|".join(
-        [
-            r"((\d{4}-)?\d{1,2}-\d{1,2} )(! )?",
-            r"((\d{4}/)?\d{1,2}/\d{1,2} )(! )?",
-            r"((\d{4}\.)?\d{1,2}\.\d{1,2} )(! )?",
-        ]
-    )
-
-    unclear_query_pattern = re.compile(f"^({unclear_query_pattern})")
+    # Only dash dates are supported; others are refused below
+    unclear_query_pattern = re.compile(r"^((\d{4}-)?\d{1,2}-\d{1,2} )(! )?")
     starting_line = 1
 
     while True:
@@ -244,6 +237,24 @@ def clear_tx(ledger_path: Path, term: Terminal) -> STATUS:
 
         if not check_valid_journal("".join(lines)):
             print(term.bold_red(f"{ledger_path} is not a valid journal"))
+            return STATUS.WAIT
+
+        non_dash_lines = [
+            str(line_number)
+            for line_number, line in enumerate(lines, start=1)
+            if is_transaction_header(line) and not _HEADER_PATS[0].match(line)
+        ]
+
+        if non_dash_lines:
+            print(
+                term.bold_red(
+                    "Transaction dates must use '-' (e.g. 2024-01-31), but these lines"
+                    f" use '/' or '.': {', '.join(non_dash_lines[:20])}"
+                    f"{' ...' if len(non_dash_lines) > 20 else ''}."
+                    " Clean Up Journal rewrites dates with '-'."
+                    f" {ledger_path} is left unchanged"
+                )
+            )
             return STATUS.WAIT
 
         line_dict = OrderedDict(
@@ -345,7 +356,7 @@ def clear_tx(ledger_path: Path, term: Terminal) -> STATUS:
                     if decision == TxDecisionType.YES_CLEAR_ALL:
                         clear_all_flag = True
 
-                    line_dict[k] = unclear_query_pattern.sub(r"\2* ", line_dict[k])
+                    line_dict[k] = unclear_query_pattern.sub(r"\1* ", line_dict[k])
 
                     if (
                         len(uncleared_tx[k]) > 1
