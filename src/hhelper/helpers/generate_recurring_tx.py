@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 from typing import TYPE_CHECKING
 
@@ -10,6 +11,15 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from blessed import Terminal
+
+
+def ends_with_newline(path: Path) -> bool:
+    with path.open("rb") as f:
+        if f.seek(0, os.SEEK_END) == 0:
+            return True
+
+        f.seek(-1, os.SEEK_END)
+        return f.read(1) == b"\n"
 
 
 def generate_recurring_tx(
@@ -62,5 +72,8 @@ def generate_recurring_tx(
         print(recur_tx)
 
         if ask_yes_no(term, "Append this to journal? (y/N/q): ", default=False):
+            # Without a final newline the first new line would join the last one
+            separator = "" if ends_with_newline(ledger_path) else "\n"
+
             with ledger_path.open("a") as f:
-                f.write(recur_tx)
+                f.write(separator + recur_tx)
