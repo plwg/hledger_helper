@@ -31,12 +31,22 @@ def expand_separator(line: str, new_length: int) -> str:
     )
 
 
+def is_posting(line: str) -> bool:
+    # Only postings are aligned; headers and comment lines can also contain
+    # numbers, and comments have no separator to expand
+    return (
+        line[:1].isspace()
+        and not line.lstrip().startswith(";")
+        and get_separator_length(line) != -1
+    )
+
+
 def align_amounts(text: str) -> str:
     lines = text.split("\n")
     anchor_locations = []
 
     for line in lines:
-        res = re.search(r"\d\.\d", line)
+        res = re.search(r"\d\.\d", line) if is_posting(line) else None
 
         if res is not None:
             anchor_locations.append(res.span()[0])
