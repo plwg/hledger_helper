@@ -57,12 +57,20 @@ def clean_up_journal(
     print(term.clear + term.move_y(term.height))
 
     # Generate the ledger content
-    sorted_ledger = subprocess.run(
+    print_result = subprocess.run(
         ["hledger", "print", "-x", "-f", str(ledger_path)],
         capture_output=True,
         text=True,
         check=False,
-    ).stdout
+    )
+
+    # On failure stdout is empty; writing it back would leave only the header
+    if print_result.returncode != 0:
+        print(print_result.stderr)
+        print(term.bold_red(f"hledger print failed, {ledger_path} is left unchanged"))
+        return STATUS.WAIT
+
+    sorted_ledger = print_result.stdout
 
     # NOTE: There is no need to account for header here since it is not in the hledger print's output
     sorted_ledger = align_amounts(sorted_ledger)
