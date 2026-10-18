@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -43,9 +44,14 @@ def parse_hledger_format(
 
     for index, row in price_history.iterrows():
         index = cast("pd.Timestamp", index)
+        close = cast("float", row["Close"])
+
+        # yfinance can return rows without a price, e.g. for the current day
+        if math.isnan(close):
+            continue
 
         prices.append(
-            f"P {index.date()} {commodity1} {commodity2}{' ' if append_space else ''}{round(cast('float', row['Close']), 2)}\n"
+            f"P {index.date()} {commodity1} {commodity2}{' ' if append_space else ''}{round(close, 2)}\n"
         )
 
     return prices
@@ -65,9 +71,12 @@ def fetch_price(
 
         if line_date is not None:
             dates.append(line_date.group(0))
-    latest_date = max(dates)
+    if dates:
+        latest_date = datetime.strptime(max(dates), "%Y-%m-%d")
+    else:
+        # No prices yet: fetch the last 30 days
+        latest_date = datetime.combine(datetime.now().date(), datetime.min.time())
 
-    latest_date = datetime.strptime(latest_date, "%Y-%m-%d")
     start_date = latest_date - timedelta(days=30)
     start_date_str = str(start_date)[:10]
 
@@ -91,6 +100,12 @@ def fetch_price(
 
         if dp_date is not None:
             dp_dates.append(dp_date.group(0))
+    if not dp_dates:
+        print(
+            f"No prices fetched since {start_date_str}, {price_file_path} is left unchanged"
+        )
+        return STATUS.WAIT
+
     latest_dp_date = max(dp_dates)
 
     print(term.clear + term.home)
@@ -110,16 +125,23 @@ def fetch_price(
     else:
         raise ValueError
 
+    # Lines without a date (comments, directives) are kept at the top, in order
+    undated_lines = []
+
     for line in lines:
         date = date_pat.search(line)
 
-        if date is not None and date.group(0) < start_date_str:
+        if date is None:
+            if line.strip():
+                undated_lines.append(line)
+
+        elif date.group(0) < start_date_str:
             daily_price.append(line)
 
     daily_price.sort()
 
     with price_file_path.open("w") as file_object:
-        file_object.writelines(daily_price)
+        file_object.writelines(undated_lines + daily_price)
 
     print(f"Prices successfully written to {price_file_path}")
 
