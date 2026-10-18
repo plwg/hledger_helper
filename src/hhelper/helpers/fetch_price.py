@@ -89,8 +89,12 @@ def fetch_price(
     commodity_pairs: list[CommodityPairConfig],
     term: Terminal,
 ) -> STATUS:
-    with price_file_path.open() as file_object:
-        lines = file_object.readlines()
+    if price_file_path.is_file():
+        with price_file_path.open() as file_object:
+            lines = file_object.readlines()
+    else:
+        print(f"{price_file_path} does not exist yet; it will be created")
+        lines = []
 
     date_pat = re.compile(r"\d\d\d\d-\d\d-\d\d")
 

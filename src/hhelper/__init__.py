@@ -16,6 +16,19 @@ from hhelper.ui.display import move_y, press_key_to_continue
 from hhelper.ui.menu import menu
 
 
+def report_missing(term: Terminal, *paths: Path) -> bool:
+    # Returns whether any file is missing, after naming each one
+    missing = [path for path in paths if not path.is_file()]
+
+    for path in missing:
+        print(term.bold_red(f"File not found: {path}"))
+
+    if missing:
+        print("Create it, or check the paths in ~/.config/hhelper/config.toml.")
+
+    return bool(missing)
+
+
 def main() -> None:
     config_path = Path().home() / ".config" / "hhelper" / "config.toml"
 
@@ -57,23 +70,37 @@ def main() -> None:
         if name == AvailableHelpers.FETCH_PRICE:
             commodity_pairs = config["commodities"]["commodity_pairs"]
 
-            backup_file(price_path)
-            status = helper(price_path, commodity_pairs, term)
+            # A missing price file is created; only its directory must exist
+            if not price_path.parent.is_dir():
+                print(term.bold_red(f"Directory not found: {price_path.parent}"))
+                status = STATUS.WAIT
+            else:
+                if price_path.is_file():
+                    backup_file(price_path)
+                status = helper(price_path, commodity_pairs, term)
 
         elif name == AvailableHelpers.MARK_CLEAR:
-            backup_file(ledger_path)
-            status = helper(ledger_path, term)
+            if report_missing(term, ledger_path):
+                status = STATUS.WAIT
+            else:
+                backup_file(ledger_path)
+                status = helper(ledger_path, term)
 
         elif name == AvailableHelpers.CLEAN_UP:
-            back_up_path = backup_file(ledger_path)
-            if header_path is not None and header_path.is_file():
-                backup_file(header_path)
-            status = helper(ledger_path, header_path, back_up_path, term)
+            if report_missing(term, ledger_path):
+                status = STATUS.WAIT
+            else:
+                back_up_path = backup_file(ledger_path)
+                if header_path is not None and header_path.is_file():
+                    backup_file(header_path)
+                status = helper(ledger_path, header_path, back_up_path, term)
 
         elif name == AvailableHelpers.GEN_RECUR:
-            backup_file(ledger_path)
-
-            status = helper(ledger_path, recurring_tx_path, term)
+            if report_missing(term, ledger_path, recurring_tx_path):
+                status = STATUS.WAIT
+            else:
+                backup_file(ledger_path)
+                status = helper(ledger_path, recurring_tx_path, term)
 
         else:
             raise NotImplementedError
