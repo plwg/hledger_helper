@@ -1,38 +1,30 @@
 from __future__ import annotations
 
-import os
 import subprocess
-import tempfile
 from functools import cache
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def run_hledger_on_text(
     args: tuple[str, ...], text: str, ledger_path: Path
 ) -> tuple[int, str, str]:
-    # Run from a temporary file next to the ledger rather than stdin, so
-    # relative include directives resolve as they do for the ledger itself.
+    # The text goes in on stdin, with hledger started in the ledger's directory
+    # so relative include directives resolve as they do for the ledger itself.
     # Returns (exit code, stdout, stderr)
-    target = ledger_path.resolve()
-    fd, tmp_name = tempfile.mkstemp(
-        dir=target.parent, prefix=f".{target.name}.", suffix=".tmp"
+    result = subprocess.run(
+        ["hledger", *args, "-f", "-"],
+        input=text,
+        cwd=ledger_path.resolve().parent,
+        text=True,
+        capture_output=True,
+        check=False,
     )
 
-    try:
-        with os.fdopen(fd, "w") as tmp_file:
-            tmp_file.write(text)
-
-        result = subprocess.run(
-            ["hledger", *args, "-f", f"journal:{tmp_name}"],
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-    finally:
-        Path(tmp_name).unlink(missing_ok=True)
-
-    # Report problems against the ledger, not the temporary file
-    stderr = result.stderr.replace(tmp_name, str(ledger_path))
+    # hledger names stdin "-"; report problems against the ledger instead
+    stderr = result.stderr.replace("Error: -:", f"Error: {ledger_path}:")
     return result.returncode, result.stdout, stderr
 
 

@@ -4,9 +4,11 @@ import os
 import tempfile
 from pathlib import Path
 
+from hhelper.helpers.backup import hhelper_dir
+
 
 def safe_write(path: Path, content: str) -> None:
-    # A complete copy is written next to the file first, so a full disk fails
+    # A complete copy is written to .hhelper/tmp first, so a full disk fails
     # before the file is touched, and the copy survives if the write below is
     # interrupted. The file is then rewritten in place rather than replaced by
     # a rename: hledger-ui --watch only reloads on in-place modification, and
@@ -14,7 +16,7 @@ def safe_write(path: Path, content: str) -> None:
     target = path.resolve()
 
     fd, tmp_name = tempfile.mkstemp(
-        dir=target.parent, prefix=f".{target.name}.", suffix=".tmp"
+        dir=hhelper_dir(path, "tmp"), prefix=f"{target.name}.", suffix=".tmp"
     )
     tmp_path = Path(tmp_name)
 

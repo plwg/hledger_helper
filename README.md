@@ -90,6 +90,11 @@ commodity_pairs = [
 ```
 
 
+### Backups
+
+Before changing a file, **hhelper** saves a timestamped copy in a `.hhelper/backups` folder in your configured `directory`, keeping the 10 most recent copies of each file. Each save first writes the new content to `.hhelper/tmp`; if the save is interrupted, that copy is kept and its path is shown. If your journal directory is a git repository, add `.hhelper/` to its `.gitignore`.
+
+
 ## 📜 License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
