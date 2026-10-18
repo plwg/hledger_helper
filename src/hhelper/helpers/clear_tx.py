@@ -338,7 +338,10 @@ def clear_tx(ledger_path: Path, term: Terminal) -> STATUS:
 
                 line_dict[k] = unclear_query_pattern.sub(r"\2* ", line_dict[k])
 
-                if uncleared_tx[k][1] == LineType.GENERATED_COMMENTS:
+                if (
+                    len(uncleared_tx[k]) > 1
+                    and uncleared_tx[k][1] == LineType.GENERATED_COMMENTS
+                ):
                     line_dict.pop(k + 1)
 
                 with ledger_path.open("w") as f:
