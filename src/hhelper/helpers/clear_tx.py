@@ -19,6 +19,20 @@ if TYPE_CHECKING:
     from blessed import Terminal
 
 
+# Patterns are compiled once; they are matched against every line of the journal
+_HEADER_PATS = (
+    re.compile(r"((?P<year>\d{4})-)?(?P<month>\d{1,2})-(?P<day>\d{1,2}) "),
+    re.compile(r"((?P<year>\d{4})\.)?(?P<month>\d{1,2})\.(?P<day>\d{1,2}) "),
+    re.compile(r"((?P<year>\d{4})/)?(?P<month>\d{1,2})/(?P<day>\d{1,2}) "),
+)
+_CLEARED_HEADER_PATS = (
+    re.compile(r"((?P<year>\d{4})-)?(?P<month>\d{1,2})-(?P<day>\d{1,2}) \* "),
+    re.compile(r"((?P<year>\d{4})\.)?(?P<month>\d{1,2})\.(?P<day>\d{1,2}) \* "),
+    re.compile(r"((?P<year>\d{4})/)?(?P<month>\d{1,2})/(?P<day>\d{1,2}) \* "),
+)
+_POSTING_PAT = re.compile(r"\s+\w+")
+
+
 class LineType(Enum):
     CLEARED = auto()
     UNCLEARED_HEAD = auto()
@@ -100,11 +114,9 @@ def get_regex_search_string(term: Terminal) -> str | SearchStringType:
 @cache
 def is_transaction_header(text: str) -> bool:
     match = (
-        re.match(r"((?P<year>\d{4})-)?(?P<month>\d{1,2})-(?P<day>\d{1,2}) .*", text)
-        or re.match(
-            r"((?P<year>\d{4})\.)?(?P<month>\d{1,2})\.(?P<day>\d{1,2}) .*", text
-        )
-        or re.match(r"((?P<year>\d{4})/)?(?P<month>\d{1,2})/(?P<day>\d{1,2}) .*", text)
+        _HEADER_PATS[0].match(text)
+        or _HEADER_PATS[1].match(text)
+        or _HEADER_PATS[2].match(text)
     )
 
     if match:
@@ -133,15 +145,9 @@ def is_transaction_header_cleared(text: str) -> bool:
     if is_transaction_header(text):
         # Return match
         match = (
-            re.match(
-                r"((?P<year>\d{4})-)?(?P<month>\d{1,2})-(?P<day>\d{1,2}) \* ", text
-            )
-            or re.match(
-                r"((?P<year>\d{4})\.)?(?P<month>\d{1,2})\.(?P<day>\d{1,2}) \* ", text
-            )
-            or re.match(
-                r"((?P<year>\d{4})/)?(?P<month>\d{1,2})/(?P<day>\d{1,2}) \* ", text
-            )
+            _CLEARED_HEADER_PATS[0].match(text)
+            or _CLEARED_HEADER_PATS[1].match(text)
+            or _CLEARED_HEADER_PATS[2].match(text)
         )
 
         return match is not None
@@ -187,7 +193,7 @@ def update_line_status(
             line_number >= start_line + 1
             and line_status[line_number - 1]
             in {LineType.UNCLEARED_HEAD, LineType.UNCLEARED_BODY}
-            and re.match(r"\s+\w+", line)
+            and _POSTING_PAT.match(line)
         ) or (
             line_number >= start_line + 2
             and line_status[line_number - 2] == LineType.UNCLEARED_HEAD
@@ -281,71 +287,81 @@ def clear_tx(ledger_path: Path, term: Terminal) -> STATUS:
 
         index = 0
         clear_all_flag = False
-        while index <= max_index:
-            k = keys[index]
-            v = uncleared_tx_text[k]
+        pending_write = False
+        try:
+            while index <= max_index:
+                k = keys[index]
+                v = uncleared_tx_text[k]
 
-            index += 1
+                index += 1
 
-            if clear_all_flag:
-                decision = TxDecisionType.YES_CLEAR_ALL
-            else:
-                decision = get_tx_decision(f"[{index}/{total_num}]", v, term)
+                if clear_all_flag:
+                    decision = TxDecisionType.YES_CLEAR_ALL
+                else:
+                    decision = get_tx_decision(f"[{index}/{total_num}]", v, term)
 
-            if decision == TxDecisionType.HELP:
-                clear_screen_move_to_bottom(term)
-                print_help_string()
-                press_key_to_continue(term)
-                clear_screen_move_to_bottom(term)
+                if decision == TxDecisionType.HELP:
+                    clear_screen_move_to_bottom(term)
+                    print_help_string()
+                    press_key_to_continue(term)
+                    clear_screen_move_to_bottom(term)
 
-                index -= 1
-                continue
+                    index -= 1
+                    continue
 
-            if decision == TxDecisionType.REGEX:
-                clear_screen_move_to_bottom(term)
-                break
+                if decision == TxDecisionType.REGEX:
+                    clear_screen_move_to_bottom(term)
+                    break
 
-            if decision == TxDecisionType.QUIT:
-                return STATUS.NOWAIT
+                if decision == TxDecisionType.QUIT:
+                    return STATUS.NOWAIT
 
-            if decision == TxDecisionType.DONT_CLEAR:
-                clear_screen_move_to_bottom(term)
+                if decision == TxDecisionType.DONT_CLEAR:
+                    clear_screen_move_to_bottom(term)
 
-            elif decision == TxDecisionType.VIEW_REST:
-                remaining_items = [
-                    value for key, value in uncleared_tx_text.items() if key >= k
-                ]
+                elif decision == TxDecisionType.VIEW_REST:
+                    remaining_items = [
+                        value for key, value in uncleared_tx_text.items() if key >= k
+                    ]
 
-                num_remaining = len(remaining_items)
+                    num_remaining = len(remaining_items)
 
-                clear_screen_move_to_bottom(term)
-                for i, item in enumerate(remaining_items, start=1):
-                    print(f"[{i}/{num_remaining}]")
-                    print(item)
+                    clear_screen_move_to_bottom(term)
+                    for i, item in enumerate(remaining_items, start=1):
+                        print(f"[{i}/{num_remaining}]")
+                        print(item)
 
-                for _ in range(2):
-                    print("*" * term.width)
+                    for _ in range(2):
+                        print("*" * term.width)
 
-                print()
+                    print()
 
-                index -= 1
+                    index -= 1
 
-            elif decision in {
-                TxDecisionType.YES_CLEAR,
-                TxDecisionType.YES_CLEAR_ALL,
-            }:
-                if decision == TxDecisionType.YES_CLEAR_ALL:
-                    clear_all_flag = True
+                elif decision in {
+                    TxDecisionType.YES_CLEAR,
+                    TxDecisionType.YES_CLEAR_ALL,
+                }:
+                    if decision == TxDecisionType.YES_CLEAR_ALL:
+                        clear_all_flag = True
 
-                line_dict[k] = unclear_query_pattern.sub(r"\2* ", line_dict[k])
+                    line_dict[k] = unclear_query_pattern.sub(r"\2* ", line_dict[k])
 
-                if (
-                    len(uncleared_tx[k]) > 1
-                    and uncleared_tx[k][1] == LineType.GENERATED_COMMENTS
-                ):
-                    line_dict.pop(k + 1)
+                    if (
+                        len(uncleared_tx[k]) > 1
+                        and uncleared_tx[k][1] == LineType.GENERATED_COMMENTS
+                    ):
+                        line_dict.pop(k + 1)
 
+                    if clear_all_flag:
+                        # Rewriting the whole file per transaction is O(n^2) when clearing
+                        # all, so defer to a single write once the batch is done
+                        pending_write = True
+                    else:
+                        safe_write(ledger_path, "".join(line_dict.values()))
+                    clear_screen_move_to_bottom(term)
+                else:
+                    raise NotImplementedError
+        finally:
+            if pending_write:
                 safe_write(ledger_path, "".join(line_dict.values()))
-                clear_screen_move_to_bottom(term)
-            else:
-                raise NotImplementedError

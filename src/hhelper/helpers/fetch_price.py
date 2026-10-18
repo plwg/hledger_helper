@@ -6,8 +6,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, cast
 
-import yfinance as yf
-
 from hhelper.helpers.return_status import STATUS
 from hhelper.helpers.safe_write import safe_write
 from hhelper.ui.display import ask_yes_no
@@ -28,6 +26,9 @@ class CommodityPair:
 
 
 def fetch_hist_price(name: str, start_date: datetime) -> pd.DataFrame:
+    # Imported lazily: yfinance pulls in pandas, which dominates startup time
+    import yfinance as yf
+
     # Return price history
     return yf.download(
         name,
