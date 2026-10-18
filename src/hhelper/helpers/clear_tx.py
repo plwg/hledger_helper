@@ -228,7 +228,9 @@ def clear_tx(ledger_path: Path, term: Terminal) -> STATUS:
         with ledger_path.open() as f:
             lines = f.readlines()
 
-        check_valid_journal("".join(lines))
+        if not check_valid_journal("".join(lines)):
+            print(term.bold_red(f"{ledger_path} is not a valid journal"))
+            return STATUS.WAIT
 
         line_dict = OrderedDict(
             [(index, line) for index, line in enumerate(lines, start=1)]

@@ -83,7 +83,13 @@ def clean_up_journal(
     # Check the result ledger
     sorted_ledger = f"{header_content}\n\n\n{sorted_ledger}"
 
-    check_valid_journal(sorted_ledger)
+    if not check_valid_journal(sorted_ledger):
+        print(
+            term.bold_red(
+                f"Cleaned journal is invalid, {ledger_path} is left unchanged"
+            )
+        )
+        return STATUS.WAIT
 
     # Write the sorted ledger to the file
     with ledger_path.open("w") as ledger_file:

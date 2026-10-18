@@ -1,10 +1,9 @@
 import subprocess
-import sys
 from functools import cache
 
 
 @cache
-def check_valid_journal(text: str) -> None:
+def _run_hledger_check(text: str) -> tuple[int, str]:
     result = subprocess.run(
         ["hledger", "check", "-f", "-"],
         input=text,
@@ -12,8 +11,14 @@ def check_valid_journal(text: str) -> None:
         capture_output=True,
         check=False,
     )
-    err = result.stderr
+    return result.returncode, result.stderr
+
+
+def check_valid_journal(text: str) -> bool:
+    # hledger may print warnings to stderr; only a non-zero exit code is an error
+    returncode, err = _run_hledger_check(text)
 
     if err != "":
         print(err)
-        sys.exit()
+
+    return returncode == 0
