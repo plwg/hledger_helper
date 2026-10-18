@@ -17,8 +17,33 @@ if TYPE_CHECKING:
 
 
 def clean_up_journal(
-    ledger_path: Path, header_path: Path, backup_ledger_path: Path, term: Terminal
+    ledger_path: Path,
+    header_path: Path | None,
+    backup_ledger_path: Path,
+    term: Terminal,
 ) -> STATUS:
+    # The header is the only way directives and comments survive clean-up, so
+    # refuse rather than silently dropping them
+    if header_path is None or not header_path.is_file():
+        problem = (
+            "header_file is not set in ~/.config/hhelper/config.toml."
+            if header_path is None
+            else f"The header file {header_path} does not exist."
+        )
+        for msg in (
+            problem,
+            (
+                "Clean-up rebuilds the ledger from hledger print, which drops"
+                " directives and comments; the header file is what keeps them."
+            ),
+            (
+                "Create the header file (it can be empty) or fix header_file in the"
+                f" config. {ledger_path} is left unchanged."
+            ),
+        ):
+            print(term.bold_red(msg))
+        return STATUS.WAIT
+
     with term.hidden_cursor():
         warning_message = (
             "Relying on hledger print, cleaning up has the following behaviors:",

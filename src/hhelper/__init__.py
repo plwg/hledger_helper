@@ -38,7 +38,8 @@ def main() -> None:
 
     ledger_path = directory / paths["ledger_file"]
     price_path = directory / paths["price_file"]
-    header_path = directory / paths["header_file"]
+    # Optional here; Clean Up Journal explains what to do when it is missing
+    header_path = directory / paths["header_file"] if "header_file" in paths else None
     recurring_tx_path = directory / paths["recurring_tx_file"]
 
     term = Terminal()
@@ -65,7 +66,8 @@ def main() -> None:
 
         elif name == AvailableHelpers.CLEAN_UP:
             back_up_path = backup_file(ledger_path)
-            backup_file(header_path)
+            if header_path is not None and header_path.is_file():
+                backup_file(header_path)
             status = helper(ledger_path, header_path, back_up_path, term)
 
         elif name == AvailableHelpers.GEN_RECUR:
