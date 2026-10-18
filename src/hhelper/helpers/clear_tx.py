@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from hhelper.helpers.check_valid_journal import check_valid_journal
 from hhelper.helpers.return_status import STATUS
+from hhelper.helpers.safe_write import safe_write
 from hhelper.ui.display import clear_screen_move_to_bottom, press_key_to_continue
 
 if TYPE_CHECKING:
@@ -344,9 +345,7 @@ def clear_tx(ledger_path: Path, term: Terminal) -> STATUS:
                 ):
                     line_dict.pop(k + 1)
 
-                with ledger_path.open("w") as f:
-                    for line in line_dict.values():
-                        f.write(line)
+                safe_write(ledger_path, "".join(line_dict.values()))
                 clear_screen_move_to_bottom(term)
             else:
                 raise NotImplementedError

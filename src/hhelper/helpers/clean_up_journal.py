@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from hhelper.helpers.align_posting import align_amounts
 from hhelper.helpers.check_valid_journal import check_valid_journal
 from hhelper.helpers.return_status import STATUS
+from hhelper.helpers.safe_write import safe_write
 from hhelper.ui.display import ask_yes_no
 
 if TYPE_CHECKING:
@@ -85,8 +86,7 @@ def clean_up_journal(
         return STATUS.WAIT
 
     # Write the sorted ledger to the file
-    with ledger_path.open("w") as ledger_file:
-        ledger_file.write(sorted_ledger)
+    safe_write(ledger_path, sorted_ledger)
 
     print(term.bold_white(f"Write sorted ledger to {ledger_path}"))
 

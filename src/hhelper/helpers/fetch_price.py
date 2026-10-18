@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, cast
 import yfinance as yf
 
 from hhelper.helpers.return_status import STATUS
+from hhelper.helpers.safe_write import safe_write
 from hhelper.ui.display import ask_yes_no
 
 if TYPE_CHECKING:
@@ -133,8 +134,7 @@ def fetch_price(
 
     daily_price.sort()
 
-    with price_file_path.open("w") as file_object:
-        file_object.writelines(undated_lines + daily_price)
+    safe_write(price_file_path, "".join(undated_lines + daily_price))
 
     print(f"Prices successfully written to {price_file_path}")
 
