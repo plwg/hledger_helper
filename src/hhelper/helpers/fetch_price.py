@@ -60,6 +60,22 @@ def parse_hledger_format(
     return prices
 
 
+def is_refetched(line: str, date: str, refetched_prefixes: list[str]) -> bool:
+    # Matches the lines parse_hledger_format writes: "P DATE BASE QUOTE[ ]AMOUNT"
+    head = f"P {date} "
+    if not line.startswith(head):
+        return False
+
+    rest = line[len(head) :]
+    for prefix in refetched_prefixes:
+        if rest.startswith(prefix):
+            amount_start = rest[len(prefix) : len(prefix) + 1]
+            if amount_start.isdigit() or amount_start == "-":
+                return True
+
+    return False
+
+
 def fetch_price(
     price_file_path: Path, commodity_pairs: list[dict[str, str]], term: Terminal
 ) -> STATUS:
@@ -84,18 +100,28 @@ def fetch_price(
     start_date_str = str(start_date)[:10]
 
     daily_price = []
+    # Only pairs that returned prices have their existing prices replaced
+    refetched_prefixes = []
+    failed_symbols = []
 
     commodity_pairs_list = [CommodityPair(**cp) for cp in commodity_pairs]  # type: ignore [missing-argument]
 
     for pair in commodity_pairs_list:
-        daily_price.extend(
-            parse_hledger_format(
-                fetch_hist_price(pair.symbol, start_date),
-                pair.base_currency,
-                pair.quote_currency,
-                pair.is_append_space,
-            )
+        prices = parse_hledger_format(
+            fetch_hist_price(pair.symbol, start_date),
+            pair.base_currency,
+            pair.quote_currency,
+            pair.is_append_space,
         )
+
+        if prices:
+            daily_price.extend(prices)
+            refetched_prefixes.append(
+                f"{pair.base_currency} {pair.quote_currency}"
+                f"{' ' if pair.is_append_space else ''}"
+            )
+        else:
+            failed_symbols.append(pair.symbol)
 
     dp_dates = []
     for dp in daily_price:
@@ -117,6 +143,14 @@ def fetch_price(
         f"Fetched {len(daily_price)} postings from {start_date_str} to {latest_dp_date}"
     )
 
+    if failed_symbols:
+        print(
+            term.yellow(
+                f"No prices fetched for {', '.join(failed_symbols)};"
+                " their existing prices are kept"
+            )
+        )
+
     if not ask_yes_no(term, "Write to file? (Y/n/q): ", default=True):
         return STATUS.NOWAIT
 
@@ -130,7 +164,9 @@ def fetch_price(
             if line.strip():
                 undated_lines.append(line)
 
-        elif date.group(0) < start_date_str:
+        elif date.group(0) < start_date_str or not is_refetched(
+            line, date.group(0), refetched_prefixes
+        ):
             daily_price.append(line)
 
     daily_price.sort()
