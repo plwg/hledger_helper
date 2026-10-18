@@ -17,7 +17,6 @@ classifiers = [
 ]
 dependencies = [
     "blessed>=1.20.0",
-    "toml>=0.10.2",
     "yfinance>=0.2.61",
 ]
 

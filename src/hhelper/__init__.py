@@ -1,8 +1,8 @@
+import tomllib
 from collections.abc import Callable
 from pathlib import Path
 from typing import cast
 
-import toml
 from blessed import Terminal
 
 from hhelper.helpers.backup import backup_file
@@ -20,7 +20,8 @@ def main() -> None:
     config_path = Path().home() / ".config" / "hhelper" / "config.toml"
 
     try:
-        config = toml.load(config_path)
+        with config_path.open("rb") as config_file:
+            config = tomllib.load(config_file)
 
     except FileNotFoundError:
         msg = (
