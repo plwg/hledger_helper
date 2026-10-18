@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import difflib
 import subprocess
 from typing import TYPE_CHECKING
 
 from hhelper.helpers.align_posting import align_amounts
-from hhelper.helpers.check_valid_journal import check_valid_journal
+from hhelper.helpers.check_valid_journal import run_hledger_on_text
 from hhelper.helpers.return_status import STATUS
 from hhelper.helpers.safe_write import safe_write
 from hhelper.ui.display import ask_yes_no
@@ -77,10 +78,37 @@ def clean_up_journal(
     # Check the result ledger
     sorted_ledger = f"{header_content}\n\n\n{sorted_ledger}"
 
-    if not check_valid_journal(sorted_ledger, ledger_path):
+    returncode, cleaned_print, err = run_hledger_on_text(
+        ("print", "-x"), sorted_ledger, ledger_path
+    )
+
+    if returncode != 0:
+        print(err)
         print(
             term.bold_red(
                 f"Cleaned journal is invalid, {ledger_path} is left unchanged"
+            )
+        )
+        return STATUS.WAIT
+
+    # The cleaned journal must read exactly like the current one. It would not
+    # if the header includes a file with transactions (counted twice) or has an
+    # alias (applied twice)
+    if cleaned_print != print_result.stdout:
+        diff = difflib.unified_diff(
+            print_result.stdout.splitlines(keepends=True),
+            cleaned_print.splitlines(keepends=True),
+            "current journal",
+            "cleaned journal",
+            n=1,
+        )
+        print("".join(list(diff)[:30]))
+        print(
+            term.bold_red(
+                "The cleaned journal would read differently from the current one,"
+                " usually because the header file includes a file with transactions"
+                " or has an alias directive."
+                f" {ledger_path} is left unchanged"
             )
         )
         return STATUS.WAIT
