@@ -8,7 +8,7 @@ from hhelper.helpers.align_posting import align_amounts
 from hhelper.helpers.check_valid_journal import run_hledger_on_text
 from hhelper.helpers.return_status import STATUS
 from hhelper.helpers.safe_write import safe_write
-from hhelper.ui.display import ask_yes_no
+from hhelper.ui.display import ask_yes_no, move_y
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -64,17 +64,17 @@ def clean_up_journal(
         max_len = max(len(m) for m in warning_message)
         warning_message = [m.ljust(max_len) for m in warning_message]
 
-        print(term.home + term.move_y(term.height // 2 - len(warning_message) // 2))
+        print(term.home + move_y(term, term.height // 2 - len(warning_message) // 2))
 
         for msg in warning_message:
             print(term.center(term.bold(msg)))
 
-        print(term.move_y(term.height))
+        print(move_y(term, term.height))
 
         if not ask_yes_no(term, "Continue? (Y/n/q): ", default=True):
             return STATUS.NOWAIT
 
-    print(term.clear + term.move_y(term.height))
+    print(term.clear + move_y(term, term.height))
 
     # Generate the ledger content
     print_result = subprocess.run(

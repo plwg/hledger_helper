@@ -12,7 +12,7 @@ from hhelper.helpers.options import (
     get_selected_option,
 )
 from hhelper.helpers.return_status import STATUS
-from hhelper.ui.display import press_key_to_continue
+from hhelper.ui.display import move_y, press_key_to_continue
 from hhelper.ui.menu import menu
 
 
@@ -52,7 +52,7 @@ def main() -> None:
         helper = cast("Callable", helper)
 
         print(term.clear + term.home)
-        print(term.move_y(term.height))
+        print(move_y(term, term.height))
 
         if name == AvailableHelpers.FETCH_PRICE:
             commodity_pairs = config["commodities"]["commodity_pairs"]

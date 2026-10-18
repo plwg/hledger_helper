@@ -4,7 +4,7 @@ import math
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 from hhelper.helpers.return_status import STATUS
 from hhelper.helpers.safe_write import safe_write
@@ -15,6 +15,14 @@ if TYPE_CHECKING:
 
     import pandas as pd
     from blessed import Terminal
+
+
+class CommodityPairConfig(TypedDict):
+    # One entry of commodity_pairs in config.toml
+    symbol: str
+    base_currency: str
+    quote_currency: str
+    is_append_space: bool
 
 
 @dataclass
@@ -77,7 +85,9 @@ def is_refetched(line: str, date: str, refetched_prefixes: list[str]) -> bool:
 
 
 def fetch_price(
-    price_file_path: Path, commodity_pairs: list[dict[str, str]], term: Terminal
+    price_file_path: Path,
+    commodity_pairs: list[CommodityPairConfig],
+    term: Terminal,
 ) -> STATUS:
     with price_file_path.open() as file_object:
         lines = file_object.readlines()
@@ -104,7 +114,7 @@ def fetch_price(
     refetched_prefixes = []
     failed_symbols = []
 
-    commodity_pairs_list = [CommodityPair(**cp) for cp in commodity_pairs]  # type: ignore [missing-argument]
+    commodity_pairs_list = [CommodityPair(**cp) for cp in commodity_pairs]
 
     for pair in commodity_pairs_list:
         prices = parse_hledger_format(
