@@ -235,7 +235,7 @@ def clear_tx(ledger_path: Path, term: Terminal) -> STATUS:
         with ledger_path.open() as f:
             lines = f.readlines()
 
-        if not check_valid_journal("".join(lines)):
+        if not check_valid_journal("".join(lines), ledger_path):
             print(term.bold_red(f"{ledger_path} is not a valid journal"))
             return STATUS.WAIT
 
