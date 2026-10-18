@@ -58,7 +58,8 @@ def generate_recurring_tx(
             check=False,
         )
 
-        if recurring_tx_result.stderr != "":
+        # hledger may print warnings to stderr; only a non-zero exit code is an error
+        if recurring_tx_result.returncode != 0:
             print(recurring_tx_result.stderr)
 
             press_key_to_continue(term)
@@ -68,6 +69,9 @@ def generate_recurring_tx(
         recur_tx = recurring_tx_result.stdout
         print(term.clear + term.home)
         print(term.move_y(term.height))
+
+        if recurring_tx_result.stderr != "":
+            print(recurring_tx_result.stderr)
 
         print(recur_tx)
 
