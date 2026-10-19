@@ -1,6 +1,7 @@
 import pytest
 
 from hhelper.helpers.similarity import (
+    contained_key_pairs,
     edit_distance,
     extras_key,
     looks_like_typo,
@@ -126,17 +127,41 @@ def test_relation() -> None:
     assert relation("WHOLE FOODS", "Whole Foods") == "written differently"
     assert relation("Amazon.com", "Amazon") == "with bank extras (.com, #1234, SQ *)"
     assert relation("Whole Food", "Whole Foods") == "similar"
+    assert relation("Uber Eats", "Uber") == "longer name"
+    assert relation("Uber", "Uber Eats") == "shorter name"
 
 
-def test_similar_groups_include_bank_extras_but_not_extra_words() -> None:
+def test_similar_groups_include_bank_extras_and_longer_names() -> None:
     counts = {
         "Amazon": 16,
         "Amazon.com": 1,
         "Amazom": 1,
+        "Amazon Prime": 4,
         "Uber": 10,
         "Uber Eats": 5,
         "Invoice 1001": 1,
         "Invoice 1002": 1,
     }
 
-    assert similar_groups(counts) == [["Amazon", "Amazom", "Amazon.com"]]
+    assert similar_groups(counts) == [
+        ["Amazon", "Amazon Prime", "Amazom", "Amazon.com"],
+        ["Uber", "Uber Eats"],
+    ]
+
+
+def test_contained_key_pairs() -> None:
+    keys = ["uber", "ubereats", "bar", "barber", "netflix", "netflixcomsubscription"]
+
+    assert contained_key_pairs(keys) == {
+        ("uber", "ubereats"),
+        ("netflix", "netflixcomsubscription"),
+    }
+
+
+def test_contained_key_pairs_matches_checking_every_pair() -> None:
+    keys = ["shell", "shelloil", "oils", "rent", "currentaccount", "rental", "ren"]
+    every_pair = {
+        (a, b) for a in keys for b in keys if a != b and len(a) >= 4 and a in b
+    }
+
+    assert contained_key_pairs(keys) == every_pair

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+import shlex
 import subprocess
 from collections import Counter, defaultdict
 from itertools import combinations
@@ -103,6 +104,44 @@ def accounts_under(counts: Counter[str], account: str, limit: int = 3) -> str:
     return f"; in {shown}{more}"
 
 
+_ACCOUNT_SED = (
+    r"sed -i -E 's/^([[:space:]]+([*!][[:space:]]*)?[([]?)OLD\b/\1NEW/;"
+    r" s/^account OLD\b/account NEW/'"
+)
+_DESCRIPTION_SED = (
+    r"sed -i -E 's/^([0-9][^ ]* +([*!] +)?(\([^)]*\) +)?)OLD( *;.*)?$/\1NEW\4/'"
+)
+
+
+def how_to(ledger_path: Path, files: list[str]) -> list[str]:
+    file_list = " ".join(shlex.quote(f) for f in files)
+    return [
+        "How to read it",
+        "  Each group starts with its most used name, the likely one to keep. The",
+        "  others say how they differ from it:",
+        "    written differently  same apart from case, spacing or punctuation",
+        "    with bank extras     same apart from a web address (.com), store number",
+        "                         (#1234) or payment prefix (SQ *, PAYPAL *)",
+        "    similar              one or two typing errors apart (names of 5 or more",
+        "                         characters, without digits)",
+        "    longer/shorter name  one contains the other (4 or more characters); this",
+        "                         also matches inside words, e.g. Rent and Current",
+        "  Counts are transactions for descriptions and postings for accounts.",
+        "",
+        "How to fix it (this report changes nothing)",
+        "  Names from bank imports: map them in your CSV rules, so they stay fixed.",
+        "  An account, without editing past entries: add an alias to your header file:",
+        "    alias OLD = NEW",
+        "  Or rename in the files. Back up first; this needs GNU sed (gsed on macOS),",
+        "  and OLD is a regular expression, so put a \\ before . * ( ) [ ] in it:",
+        f"    account:      {_ACCOUNT_SED} {file_list}",
+        f"    description:  {_DESCRIPTION_SED} {file_list}",
+        f"  then check the result: hledger check -f {shlex.quote(str(ledger_path))}",
+        "  Also useful: hledger accounts --unused (declared but never used) and",
+        "  hledger check accounts (fails on undeclared accounts, e.g. typos).",
+    ]
+
+
 def similar_report(ledger_path: Path) -> str:
     descriptions = description_counts(ledger_path)
     accounts = account_counts(ledger_path)
@@ -131,14 +170,6 @@ def similar_report(ledger_path: Path) -> str:
                 f"{accounts_under(accounts, account)}"
             )
 
-    lines += [
-        "",
-        "Counts are transactions for descriptions and postings for accounts. The",
-        "first name of each group is the most used; the others say how they differ.",
-        "This report only reads your journal. To fix what it finds:",
-        "  - names from bank imports: map them in your CSV rules",
-        "  - accounts: add an alias directive, e.g. alias expenses:grocerys = expenses:groceries,",
-        "    or rename them in the files",
-        "  - also see hledger accounts --unused and hledger check accounts",
-    ]
+    files = run_hledger(("files",), ledger_path).splitlines()
+    lines += ["", *how_to(ledger_path, files)]
     return "\n".join(lines)

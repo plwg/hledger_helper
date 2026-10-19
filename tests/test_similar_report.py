@@ -3,6 +3,9 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING
 
+import shutil
+import subprocess
+
 import pytest
 
 import hhelper
@@ -10,6 +13,7 @@ from hhelper.helpers.similar_report import (
     HledgerError,
     account_counts,
     accounts_under,
+    how_to,
     description_counts,
     similar_accounts,
     similar_report,
@@ -172,3 +176,38 @@ def test_hh_similar_with_a_missing_ledger(ledger: Path) -> None:
 
     with pytest.raises(SystemExit, match="File not found"):
         hhelper.main(["--similar"])
+
+
+@requires_hledger
+@pytest.mark.skipif(
+    subprocess.run(["sed", "--version"], capture_output=True).returncode != 0,
+    reason="needs GNU sed",
+)
+def test_the_suggested_sed_commands_work(ledger: Path) -> None:
+    # Run the commands exactly as the report prints them
+    files = [str(ledger), str(ledger.parent / "years" / "2023.journal")]
+    lines = how_to(ledger, files)
+    account = next(line for line in lines if "account:" in line).split(":", 1)[1]
+    description = next(line for line in lines if "description:" in line).split(":", 1)[
+        1
+    ]
+
+    for command in (
+        account.replace("OLD", "expenses:grocerys").replace(
+            "NEW", "expenses:groceries"
+        ),
+        account.replace("OLD", "Expenses").replace("NEW", "expenses"),
+        description.replace("OLD", "whole foods").replace("NEW", "Whole Foods"),
+    ):
+        subprocess.run(command, shell=True, check=True)
+
+    report = similar_report(ledger)
+    assert "grocerys" not in report
+    assert "Expenses" not in report
+    assert "'whole foods'" not in report
+    assert (
+        subprocess.run(
+            [shutil.which("hledger") or "hledger", "check", "-f", str(ledger)]
+        ).returncode
+        == 0
+    )

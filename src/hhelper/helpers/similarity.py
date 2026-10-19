@@ -36,6 +36,11 @@ def relation(name: str, to: str) -> str:
         return "written differently"
     if extras_key(name) == extras_key(to):
         return "with bank extras (.com, #1234, SQ *)"
+    if not looks_like_typo(extras_key(name), extras_key(to)):
+        if extras_key(to) in extras_key(name):
+            return "longer name"
+        if extras_key(name) in extras_key(to):
+            return "shorter name"
     return "similar"
 
 
@@ -114,9 +119,34 @@ def similar_key_pairs(keys: Iterable[str]) -> set[tuple[str, str]]:
     return pairs
 
 
+# Shorter names are contained in too many others ("Bar" in "Barber")
+MIN_CONTAINED_LENGTH = 4
+
+
+def contained_key_pairs(keys: Iterable[str]) -> set[tuple[str, str]]:
+    # (shorter, longer) pairs where one key is part of another, e.g. "uber"
+    # and "ubereats". Each key's substrings of the lengths that occur are
+    # looked up, rather than comparing every pair
+    keys = set(keys)
+    shorter = {key for key in keys if len(key) >= MIN_CONTAINED_LENGTH}
+    lengths = sorted({len(key) for key in shorter})
+
+    pairs: set[tuple[str, str]] = set()
+    for key in keys:
+        for length in lengths:
+            if length >= len(key):
+                break
+            for start in range(len(key) - length + 1):
+                part = key[start : start + length]
+                if part in shorter:
+                    pairs.add((part, key))
+    return pairs
+
+
 def similar_groups(counts: dict[str, int]) -> list[list[str]]:
     # Groups of names that are the same apart from case, spacing, punctuation
-    # and the extras banks add, or similar. Each group forms around its most
+    # and the extras banks add, similar, or part of one another. Each group
+    # forms around its most
     # used name and only takes names similar to that one, so a chain of
     # similar names (A ~ B ~ C) does not pull unrelated names together. The
     # first name of each group is the most used one
@@ -126,7 +156,7 @@ def similar_groups(counts: dict[str, int]) -> list[list[str]]:
     key_count = {key: sum(counts[n] for n in names) for key, names in by_key.items()}
 
     neighbours: dict[str, set[str]] = defaultdict(set)
-    for a, b in similar_key_pairs(by_key):
+    for a, b in similar_key_pairs(by_key) | contained_key_pairs(by_key):
         neighbours[a].add(b)
         neighbours[b].add(a)
 
