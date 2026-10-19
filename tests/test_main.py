@@ -64,7 +64,7 @@ class MainRunner:
         self.monkeypatch.setattr(hhelper, "menu", lambda options, term: next(choices))
         self.answers()
         with pytest.raises(SystemExit):
-            hhelper.main()
+            hhelper.main([])
 
 
 @pytest.fixture
@@ -116,6 +116,6 @@ def test_missing_config_is_explained(
 ) -> None:
     monkeypatch.setenv("HOME", str(tmp_path))
 
-    hhelper.main()
+    hhelper.main([])
 
     assert "config file is not found" in capsys.readouterr().out

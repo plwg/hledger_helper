@@ -70,6 +70,41 @@ Once you've launched **hhelper**, you'll be greeted with a user-friendly menu wh
    Generate recurring transactions based on a period expression. Preview the transactions before appending them to your journal.
 
 
+### Finding similar names
+
+```bash
+hh --similar
+```
+
+Lists transaction descriptions and accounts that look like variants of each other: the same apart from case, spacing or punctuation (`Whole Foods`, `whole foods`), or similar (`Whole Food`, `expenses:grocerys`). Accounts are compared with their siblings, so `assets:bank` and `liabilities:bank` are not reported. It reads your ledger and every file it includes, and changes nothing.
+
+Similar means at most one edit apart (two for names longer than 7 characters), ignoring case, spacing and punctuation. Names shorter than 5 characters or containing digits are only reported when they are the same apart from case, spacing and punctuation, since `Rent` and `Tent` or `Invoice 1001` and `Invoice 1002` usually differ on purpose.
+
+### One-time clean-up
+
+hledger itself covers most of a clean-up:
+
+```bash
+hledger accounts --unused       # declared accounts with no postings
+hledger accounts --undeclared   # used accounts that are not declared, e.g. typos
+hledger check accounts          # fails on undeclared accounts; useful to keep it clean
+hledger descriptions | sort -f | uniq -Di   # descriptions differing only in case
+```
+
+To fix an account name without editing past transactions, add an alias to your header file, e.g. `alias expenses:grocerys = expenses:groceries`. If names come from bank imports, map them in your CSV rules so they stay fixed.
+
+To rename in the files instead, back up first, then for example (GNU sed; on macOS use `gsed`):
+
+```bash
+# Rename an account and its subaccounts in postings and account directives
+sed -i -E 's/^([[:space:]]+([*!][[:space:]]*)?[([]?)Expenses:Food\b/\1expenses:food/; s/^account Expenses:Food\b/account expenses:food/' *.journal
+
+# Rename descriptions, keeping the date, status, code and comment
+sed -i -E 's/^([0-9][^ ]* +([*!] +)?(\([^)]*\) +)?)(whole foods|Whole Food)( *;.*)?$/\1Whole Foods\5/' *.journal
+
+hledger check -f main.journal
+```
+
 ## ⚙️ Configuration
 
 **hhelper** requires a `config.toml` file located at `~/.config/hhelper/config.toml`. This file should define the paths to your ledger, price, header, and recurring transaction files. Here's an example configuration:
