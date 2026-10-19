@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
@@ -10,6 +11,32 @@ if TYPE_CHECKING:
 def name_key(name: str) -> str:
     # Names with the same key differ only in case, spacing or punctuation
     return "".join(char for char in name.casefold() if char.isalnum())
+
+
+# What banks add to a merchant's name: a payment processor prefix ("SQ *",
+# "PAYPAL *"), a web address suffix (".com"), a store number ("#1234") or a
+# reference after an asterisk ("AMZN Mktp US*2K3")
+_EXTRAS = re.compile(
+    r"^(?:sq|tst|sp|pp|paypal|py)\s*\*\s*"
+    r"|\.(?:com|net|org|co\.uk|com\.au|co|io)\b"
+    r"|#\s*\d+"
+    r"|\*\S*"
+)
+
+
+def extras_key(name: str) -> str:
+    # Names with the same key differ only in case, spacing, punctuation or
+    # the extras banks add (see _EXTRAS)
+    return name_key(_EXTRAS.sub(" ", name.casefold())) or name_key(name) or name
+
+
+def relation(name: str, to: str) -> str:
+    # How a name in a group relates to the name the group formed around
+    if name_key(name) == name_key(to):
+        return "written differently"
+    if extras_key(name) == extras_key(to):
+        return "with bank extras (.com, #1234, SQ *)"
+    return "similar"
 
 
 def variant_groups(names: Iterable[str]) -> list[list[str]]:
@@ -88,13 +115,14 @@ def similar_key_pairs(keys: Iterable[str]) -> set[tuple[str, str]]:
 
 
 def similar_groups(counts: dict[str, int]) -> list[list[str]]:
-    # Groups of names that are the same apart from case, spacing and
-    # punctuation, or similar. Each group forms around its most used name and
-    # only takes names similar to that one, so a chain of similar names
-    # (A ~ B ~ C) does not pull unrelated names together
+    # Groups of names that are the same apart from case, spacing, punctuation
+    # and the extras banks add, or similar. Each group forms around its most
+    # used name and only takes names similar to that one, so a chain of
+    # similar names (A ~ B ~ C) does not pull unrelated names together. The
+    # first name of each group is the most used one
     by_key: dict[str, list[str]] = defaultdict(list)
     for name in counts:
-        by_key[name_key(name)].append(name)
+        by_key[extras_key(name)].append(name)
     key_count = {key: sum(counts[n] for n in names) for key, names in by_key.items()}
 
     neighbours: dict[str, set[str]] = defaultdict(set)
@@ -111,5 +139,5 @@ def similar_groups(counts: dict[str, int]) -> list[list[str]]:
         assigned.update(members)
         names = [name for member in members for name in by_key[member]]
         if len(names) > 1:
-            groups.append(names)
+            groups.append(sorted(names, key=lambda n: (-counts[n], n)))
     return groups

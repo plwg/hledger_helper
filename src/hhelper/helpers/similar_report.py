@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from hhelper.helpers.similarity import (
     looks_like_typo,
-    name_key,
+    relation,
     similar_groups,
     variant_groups,
 )
@@ -89,9 +89,18 @@ def _groups(count: int) -> str:
     return f"{count} group{'' if count == 1 else 's'} of possible variants"
 
 
-def _label(names: tuple[str, ...] | list[str]) -> str:
-    keys = {name_key(name.rsplit(":", 1)[-1]) for name in names}
-    return "written differently" if len(keys) == 1 else "similar"
+def accounts_under(counts: Counter[str], account: str, limit: int = 3) -> str:
+    # The accounts with postings under a variant, so it can be found
+    used = sorted(
+        name
+        for name, count in counts.items()
+        if count and name.startswith(account + ":")
+    )
+    if not used:
+        return ""
+    shown = ", ".join(used[:limit])
+    more = f" and {len(used) - limit} more" if len(used) > limit else ""
+    return f"; in {shown}{more}"
 
 
 def similar_report(ledger_path: Path) -> str:
@@ -99,23 +108,33 @@ def similar_report(ledger_path: Path) -> str:
     accounts = account_counts(ledger_path)
     lines: list[str] = []
 
+    # Each group starts with its most used name, the likely one to keep; the
+    # others are marked with how they differ from it
     description_groups = similar_groups(descriptions)
     lines.append(f"Descriptions: {_groups(len(description_groups))}")
-    for group in description_groups:
-        variants = sorted(group, key=lambda d: (-descriptions[d], d))
-        lines.append(f"  {_label(group)}:")
-        lines += [f"    {d!r}  ({descriptions[d]})" for d in variants]
+    for first, *others in description_groups:
+        lines.append(f"  {first!r}  ({descriptions[first]})")
+        lines += [
+            f"    {d!r}  ({descriptions[d]})  {relation(d, first)}" for d in others
+        ]
 
     account_groups = similar_accounts(set(accounts))
     lines.append("")
     lines.append(f"Accounts: {_groups(len(account_groups))}")
     for group in account_groups:
-        lines.append(f"  {_label(group)}:")
-        lines += [f"    {a}  ({subtree_count(accounts, a)})" for a in group]
+        first, *others = sorted(group, key=lambda a: (-subtree_count(accounts, a), a))
+        lines.append(f"  {first}  ({subtree_count(accounts, first)})")
+        for account in others:
+            how = relation(account.rsplit(":", 1)[-1], first.rsplit(":", 1)[-1])
+            lines.append(
+                f"    {account}  ({subtree_count(accounts, account)})  {how}"
+                f"{accounts_under(accounts, account)}"
+            )
 
     lines += [
         "",
-        "Counts are transactions for descriptions and postings for accounts.",
+        "Counts are transactions for descriptions and postings for accounts. The",
+        "first name of each group is the most used; the others say how they differ.",
         "This report only reads your journal. To fix what it finds:",
         "  - names from bank imports: map them in your CSV rules",
         "  - accounts: add an alias directive, e.g. alias expenses:grocerys = expenses:groceries,",

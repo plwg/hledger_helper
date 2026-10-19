@@ -76,9 +76,28 @@ Once you've launched **hhelper**, you'll be greeted with a user-friendly menu wh
 hh --similar
 ```
 
-Lists transaction descriptions and accounts that look like variants of each other: the same apart from case, spacing or punctuation (`Whole Foods`, `whole foods`), or similar (`Whole Food`, `expenses:grocerys`). Accounts are compared with their siblings, so `assets:bank` and `liabilities:bank` are not reported. It reads your ledger and every file it includes, and changes nothing.
+Lists transaction descriptions and accounts that look like variants of each other, without changing anything. It reads your ledger and every file it includes. Each group starts with the most used name, and the others say how they differ from it:
 
-Similar means at most one edit apart (two for names longer than 7 characters), ignoring case, spacing and punctuation. Names shorter than 5 characters or containing digits are only reported when they are the same apart from case, spacing and punctuation, since `Rent` and `Tent` or `Invoice 1001` and `Invoice 1002` usually differ on purpose.
+```
+Descriptions: 7 groups of possible variants
+  'Starbucks'  (22)
+    'STARBUCKS #1234'  (1)  with bank extras (.com, #1234, SQ *)
+    'Starbuck'  (1)  similar
+    'starbucks'  (1)  written differently
+  ...
+
+Accounts: 3 groups of possible variants
+  expenses  (230)
+    Expenses  (1)  written differently; in Expenses:Food:coffee
+  expenses:shopping  (17)
+    expenses:shoping  (1)  similar
+```
+
+- **written differently**: the same apart from case, spacing or punctuation.
+- **with bank extras**: the same apart from what banks add to a merchant's name: a web address (`Amazon.com`), a store number (`#1234`) or a payment prefix (`SQ *`, `PAYPAL *`). A whole extra word is not an extra, so `Uber` and `Uber Eats` stay apart; a `#` number counts as one, so `Invoice #1001` and `Invoice #1002` are grouped.
+- **similar**: at most one edit apart (two for names longer than 7 characters), ignoring the above. Names shorter than 5 characters or containing digits are not matched this way, since `Rent` and `Tent` or `Invoice 1001` and `Invoice 1002` usually differ on purpose.
+
+Accounts are compared with their siblings, so `assets:bank` and `liabilities:bank` are not reported. Counts are transactions for descriptions and postings for accounts.
 
 ### One-time clean-up
 

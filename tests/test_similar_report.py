@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from typing import TYPE_CHECKING
 
 import pytest
@@ -8,6 +9,7 @@ import hhelper
 from hhelper.helpers.similar_report import (
     HledgerError,
     account_counts,
+    accounts_under,
     description_counts,
     similar_accounts,
     similar_report,
@@ -25,6 +27,10 @@ account expenses:unused
 include years/*.journal
 
 2024-01-01 Whole Foods
+    expenses:food  10 USD
+    assets:bank
+
+2024-01-06 Whole Foods
     expenses:food  10 USD
     assets:bank
 
@@ -85,13 +91,27 @@ def test_similar_accounts_compares_siblings_only() -> None:
     ]
 
 
+def test_accounts_under_lists_used_subaccounts() -> None:
+    counts = Counter(
+        {"Expenses:Food": 2, "Expenses:Food:coffee": 1, "Expenses:Rent": 0, "x": 1}
+    )
+
+    assert (
+        accounts_under(counts, "Expenses") == "; in Expenses:Food, Expenses:Food:coffee"
+    )
+    assert (
+        accounts_under(counts, "Expenses", limit=1) == "; in Expenses:Food and 1 more"
+    )
+    assert accounts_under(counts, "x") == ""
+
+
 @requires_hledger
 def test_counts_include_included_files(ledger: Path) -> None:
     descriptions = description_counts(ledger)
     accounts = account_counts(ledger)
 
     assert descriptions["Starbucks"] == 2
-    assert descriptions["Whole Foods"] == 1
+    assert descriptions["Whole Foods"] == 2
     assert accounts["expenses:coffee"] == 2
     assert accounts["expenses:unused"] == 0
 
@@ -102,9 +122,11 @@ def test_report_lists_variants_and_leaves_files_alone(ledger: Path) -> None:
 
     report = similar_report(ledger)
 
-    assert "'Whole Food'  (1)" in report
-    assert "'Starbuck'  (1)" in report
-    assert "expenses:grocerys  (1)" in report
+    assert "    'Whole Food'  (1)  similar" in report
+    assert "    'whole foods'  (1)  written differently" in report
+    assert "    'Starbuck'  (1)  similar" in report
+    assert "    expenses:grocerys  (1)  similar" in report
+    assert "    Expenses  (1)  written differently; in Expenses:Food" in report
     assert "'Tent'" not in report
     assert sorted(p.name for p in ledger.parent.rglob("*")) == before
 

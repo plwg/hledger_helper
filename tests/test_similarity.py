@@ -2,8 +2,10 @@ import pytest
 
 from hhelper.helpers.similarity import (
     edit_distance,
+    extras_key,
     looks_like_typo,
     name_key,
+    relation,
     similar_groups,
     similar_key_pairs,
     variant_groups,
@@ -100,3 +102,41 @@ def test_similar_groups_do_not_chain() -> None:
     counts = {"abcdefgh": 5, "abcdefgx": 3, "abcdefxx": 2, "abcdexxx": 1}
 
     assert similar_groups(counts) == [["abcdefgh", "abcdefgx", "abcdefxx"]]
+
+
+@pytest.mark.parametrize(
+    ("name", "key"),
+    [
+        ("Amazon.com", "amazon"),
+        ("AMAZON.COM", "amazon"),
+        ("STARBUCKS #1234", "starbucks"),
+        ("SQ *Blue Bottle", "bluebottle"),
+        ("PAYPAL *NETFLIX", "netflix"),
+        ("AMZN Mktp US*2K3", "amznmktpus"),
+        ("Uber Eats", "ubereats"),  # a word, not an extra
+        ("Invoice 1001", "invoice1001"),  # a bare number is kept
+        ("*", "*"),
+    ],
+)
+def test_extras_key(name: str, key: str) -> None:
+    assert extras_key(name) == key
+
+
+def test_relation() -> None:
+    assert relation("WHOLE FOODS", "Whole Foods") == "written differently"
+    assert relation("Amazon.com", "Amazon") == "with bank extras (.com, #1234, SQ *)"
+    assert relation("Whole Food", "Whole Foods") == "similar"
+
+
+def test_similar_groups_include_bank_extras_but_not_extra_words() -> None:
+    counts = {
+        "Amazon": 16,
+        "Amazon.com": 1,
+        "Amazom": 1,
+        "Uber": 10,
+        "Uber Eats": 5,
+        "Invoice 1001": 1,
+        "Invoice 1002": 1,
+    }
+
+    assert similar_groups(counts) == [["Amazon", "Amazom", "Amazon.com"]]
