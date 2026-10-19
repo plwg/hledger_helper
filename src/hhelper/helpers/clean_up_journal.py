@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import difflib
 import subprocess
 from typing import TYPE_CHECKING
 
 from hhelper.helpers.align_posting import align_amounts
-from hhelper.helpers.check_valid_journal import check_valid_journal
+from hhelper.helpers.check_valid_journal import run_hledger_on_text
 from hhelper.helpers.return_status import STATUS
+from hhelper.helpers.safe_write import safe_write
+from hhelper.ui.display import ask_yes_no, move_y
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -14,8 +17,33 @@ if TYPE_CHECKING:
 
 
 def clean_up_journal(
-    ledger_path: Path, header_path: Path, backup_ledger_path: Path, term: Terminal
+    ledger_path: Path,
+    header_path: Path | None,
+    backup_ledger_path: Path,
+    term: Terminal,
 ) -> STATUS:
+    # The header is the only way directives and comments survive clean-up, so
+    # refuse rather than silently dropping them
+    if header_path is None or not header_path.is_file():
+        problem = (
+            "header_file is not set in ~/.config/hhelper/config.toml."
+            if header_path is None
+            else f"The header file {header_path} does not exist."
+        )
+        for msg in (
+            problem,
+            (
+                "Clean-up rebuilds the ledger from hledger print, which drops"
+                " directives and comments; the header file is what keeps them."
+            ),
+            (
+                "Create the header file (it can be empty) or fix header_file in the"
+                f" config. {ledger_path} is left unchanged."
+            ),
+        ):
+            print(term.bold_red(msg))
+        return STATUS.WAIT
+
     with term.hidden_cursor():
         warning_message = (
             "Relying on hledger print, cleaning up has the following behaviors:",
@@ -36,33 +64,33 @@ def clean_up_journal(
         max_len = max(len(m) for m in warning_message)
         warning_message = [m.ljust(max_len) for m in warning_message]
 
-        print(term.home + term.move_y(term.height // 2 - len(warning_message) // 2))
+        print(term.home + move_y(term, term.height // 2 - len(warning_message) // 2))
 
         for msg in warning_message:
             print(term.center(term.bold(msg)))
 
-        print(term.move_y(term.height))
+        print(move_y(term, term.height))
 
-        descision = input(term.green("Continue? (Y/n/q): ")).lower()
-
-        if descision in {"", "y", "yes"}:
-            pass
-
-        elif descision in {"n", "no", "q", "quit"}:
+        if not ask_yes_no(term, "Continue? (Y/n/q): ", default=True):
             return STATUS.NOWAIT
 
-        else:
-            raise ValueError
-
-    print(term.clear + term.move_y(term.height))
+    print(term.clear + move_y(term, term.height))
 
     # Generate the ledger content
-    sorted_ledger = subprocess.run(
+    print_result = subprocess.run(
         ["hledger", "print", "-x", "-f", str(ledger_path)],
         capture_output=True,
         text=True,
         check=False,
-    ).stdout
+    )
+
+    # On failure stdout is empty; writing it back would leave only the header
+    if print_result.returncode != 0:
+        print(print_result.stderr)
+        print(term.bold_red(f"hledger print failed, {ledger_path} is left unchanged"))
+        return STATUS.WAIT
+
+    sorted_ledger = print_result.stdout
 
     # NOTE: There is no need to account for header here since it is not in the hledger print's output
     sorted_ledger = align_amounts(sorted_ledger)
@@ -75,11 +103,43 @@ def clean_up_journal(
     # Check the result ledger
     sorted_ledger = f"{header_content}\n\n\n{sorted_ledger}"
 
-    check_valid_journal(sorted_ledger)
+    returncode, cleaned_print, err = run_hledger_on_text(
+        ("print", "-x"), sorted_ledger, ledger_path
+    )
+
+    if returncode != 0:
+        print(err)
+        print(
+            term.bold_red(
+                f"Cleaned journal is invalid, {ledger_path} is left unchanged"
+            )
+        )
+        return STATUS.WAIT
+
+    # The cleaned journal must read exactly like the current one. It would not
+    # if the header includes a file with transactions (counted twice) or has an
+    # alias (applied twice)
+    if cleaned_print != print_result.stdout:
+        diff = difflib.unified_diff(
+            print_result.stdout.splitlines(keepends=True),
+            cleaned_print.splitlines(keepends=True),
+            "current journal",
+            "cleaned journal",
+            n=1,
+        )
+        print("".join(list(diff)[:30]))
+        print(
+            term.bold_red(
+                "The cleaned journal would read differently from the current one,"
+                " usually because the header file includes a file with transactions"
+                " or has an alias directive."
+                f" {ledger_path} is left unchanged"
+            )
+        )
+        return STATUS.WAIT
 
     # Write the sorted ledger to the file
-    with ledger_path.open("w") as ledger_file:
-        ledger_file.write(sorted_ledger)
+    safe_write(ledger_path, sorted_ledger)
 
     print(term.bold_white(f"Write sorted ledger to {ledger_path}"))
 

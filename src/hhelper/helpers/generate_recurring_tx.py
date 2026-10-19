@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import os
 import subprocess
 from typing import TYPE_CHECKING
 
 from hhelper.helpers.return_status import STATUS
-from hhelper.ui.display import press_key_to_continue
+from hhelper.ui.display import ask_yes_no, move_y, press_key_to_continue
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -12,12 +13,21 @@ if TYPE_CHECKING:
     from blessed import Terminal
 
 
+def ends_with_newline(path: Path) -> bool:
+    with path.open("rb") as f:
+        if f.seek(0, os.SEEK_END) == 0:
+            return True
+
+        f.seek(-1, os.SEEK_END)
+        return f.read(1) == b"\n"
+
+
 def generate_recurring_tx(
     ledger_path: Path, recurring_tx_path: Path, term: Terminal
 ) -> STATUS:
     while True:
         print(term.clear + term.home)
-        print(term.move_y(term.height))
+        print(move_y(term, term.height))
         period_expression = input(
             term.green("Input a period expression, or q to quit, or ? for help: ")
         )
@@ -26,7 +36,7 @@ def generate_recurring_tx(
             return STATUS.NOWAIT
 
         if period_expression == "?":
-            print(term.clear + term.home + term.move_y(term.height))
+            print(term.clear + term.home + move_y(term, term.height))
             print(
                 """Valid period expressions include: "..", "apr", "april", "aug", "august", "bimonthly", "biweekly", "daily", "dec", "december", "every", "feb", "february", "fortnightly", "from", "in", "jan", "january", "jul", "july", "jun", "june", "last", "mar", "march", "may", "monthly", "next", "nov", "november", "oct", "october", "quarterly", "sep", "september", "this", "to", "today", "tomorrow", "until", "weekly", "yearly", "yesterday", '+', '-', 'Q', 'q', digit, integer, or year."""
             )
@@ -48,7 +58,8 @@ def generate_recurring_tx(
             check=False,
         )
 
-        if recurring_tx_result.stderr != "":
+        # hledger may print warnings to stderr; only a non-zero exit code is an error
+        if recurring_tx_result.returncode != 0:
             print(recurring_tx_result.stderr)
 
             press_key_to_continue(term)
@@ -57,18 +68,16 @@ def generate_recurring_tx(
 
         recur_tx = recurring_tx_result.stdout
         print(term.clear + term.home)
-        print(term.move_y(term.height))
+        print(move_y(term, term.height))
+
+        if recurring_tx_result.stderr != "":
+            print(recurring_tx_result.stderr)
 
         print(recur_tx)
 
-        decision = input(term.green("Append this to jorunal? (y/N/q): ")).lower()
+        if ask_yes_no(term, "Append this to journal? (y/N/q): ", default=False):
+            # Without a final newline the first new line would join the last one
+            separator = "" if ends_with_newline(ledger_path) else "\n"
 
-        if decision in {"y", "yes"}:
             with ledger_path.open("a") as f:
-                f.write(recur_tx)
-
-        elif decision in {"", "n", "no", "q", "quit"}:
-            continue
-
-        else:
-            raise ValueError
+                f.write(separator + recur_tx)

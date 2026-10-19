@@ -24,7 +24,7 @@ Welcome to **hledger Helper (hhelper)**, a command-line tool for simplifying and
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Python 3.9 or higher
+- Python 3.11 or higher
 - [hledger](https://hledger.org/) 1.25 or higher
 - A valid `config.toml` file in `~/.config/hhelper/` (see [example config](https://github.com/plwg/hledger_helper))
 
@@ -88,6 +88,20 @@ commodity_pairs = [
     { symbol = "BTC-USD", base_currency = "USD", quote_currency = "BTC", is_append_space = false },
 ]
 ```
+
+
+### Backups
+
+Before changing a file, **hhelper** saves a timestamped copy in a `.hhelper/backups` folder in your configured `directory`, keeping the 10 most recent copies of each file. Each save first writes the new content to `.hhelper/tmp`; if the save is interrupted, that copy is kept and its path is shown. If your journal directory is a git repository, add `.hhelper/` to its `.gitignore`.
+
+
+## 🧪 Development
+
+```bash
+uv run pytest
+```
+
+The tests run without a terminal or network: prompts and Yahoo Finance are replaced with test doubles. Tests that need hledger are skipped when it is not installed.
 
 
 ## 📜 License

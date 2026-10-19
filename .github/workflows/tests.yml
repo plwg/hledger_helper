@@ -1,0 +1,43 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install hledger
+        run: sudo apt-get update && sudo apt-get install -y hledger
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Run tests
+        env:
+          UV_PYTHON_PREFERENCE: managed
+        run: uv run --python ${{ matrix.python }} pytest
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Ruff
+        run: |
+          uvx ruff@0.11.4 check src tests
+          uvx ruff@0.11.4 format --check src tests
+
+      - name: ty
+        run: |
+          uv sync
+          uvx ty@0.0.89 check --python .venv/bin/python src tests

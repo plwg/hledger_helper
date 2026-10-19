@@ -4,6 +4,7 @@ import time
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
+from hhelper.ui.display import move_y
 from hhelper.ui.print_greeting import print_greeting
 
 if TYPE_CHECKING:
@@ -32,7 +33,7 @@ def display_menu(
     selected_index: int,
     is_jump: bool,
 ) -> None:
-    print(term.home + term.move_y(term.height // 2 - len_options // 2 - 8))
+    print(term.home + move_y(term, term.height // 2 - len_options // 2 - 8))
     print_greeting(term)
 
     highlight_color_funct = (

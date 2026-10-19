@@ -1,7 +1,8 @@
+import tomllib
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, cast
+from typing import cast
 
-import toml
 from blessed import Terminal
 
 from hhelper.helpers.backup import backup_file
@@ -11,15 +12,29 @@ from hhelper.helpers.options import (
     get_selected_option,
 )
 from hhelper.helpers.return_status import STATUS
-from hhelper.ui.display import press_key_to_continue
+from hhelper.ui.display import move_y, press_key_to_continue
 from hhelper.ui.menu import menu
+
+
+def report_missing(term: Terminal, *paths: Path) -> bool:
+    # Returns whether any file is missing, after naming each one
+    missing = [path for path in paths if not path.is_file()]
+
+    for path in missing:
+        print(term.bold_red(f"File not found: {path}"))
+
+    if missing:
+        print("Create it, or check the paths in ~/.config/hhelper/config.toml.")
+
+    return bool(missing)
 
 
 def main() -> None:
     config_path = Path().home() / ".config" / "hhelper" / "config.toml"
 
     try:
-        config = toml.load(config_path)
+        with config_path.open("rb") as config_file:
+            config = tomllib.load(config_file)
 
     except FileNotFoundError:
         msg = (
@@ -36,7 +51,8 @@ def main() -> None:
 
     ledger_path = directory / paths["ledger_file"]
     price_path = directory / paths["price_file"]
-    header_path = directory / paths["header_file"]
+    # Optional here; Clean Up Journal explains what to do when it is missing
+    header_path = directory / paths["header_file"] if "header_file" in paths else None
     recurring_tx_path = directory / paths["recurring_tx_file"]
 
     term = Terminal()
@@ -49,27 +65,42 @@ def main() -> None:
         helper = cast("Callable", helper)
 
         print(term.clear + term.home)
-        print(term.move_y(term.height))
+        print(move_y(term, term.height))
 
         if name == AvailableHelpers.FETCH_PRICE:
             commodity_pairs = config["commodities"]["commodity_pairs"]
 
-            backup_file(price_path)
-            status = helper(price_path, commodity_pairs, term)
+            # A missing price file is created; only its directory must exist
+            if not price_path.parent.is_dir():
+                print(term.bold_red(f"Directory not found: {price_path.parent}"))
+                status = STATUS.WAIT
+            else:
+                if price_path.is_file():
+                    backup_file(price_path)
+                status = helper(price_path, commodity_pairs, term)
 
         elif name == AvailableHelpers.MARK_CLEAR:
-            backup_file(ledger_path)
-            status = helper(ledger_path, term)
+            if report_missing(term, ledger_path):
+                status = STATUS.WAIT
+            else:
+                backup_file(ledger_path)
+                status = helper(ledger_path, term)
 
         elif name == AvailableHelpers.CLEAN_UP:
-            back_up_path = backup_file(ledger_path)
-            backup_file(header_path)
-            status = helper(ledger_path, header_path, back_up_path, term)
+            if report_missing(term, ledger_path):
+                status = STATUS.WAIT
+            else:
+                back_up_path = backup_file(ledger_path)
+                if header_path is not None and header_path.is_file():
+                    backup_file(header_path)
+                status = helper(ledger_path, header_path, back_up_path, term)
 
         elif name == AvailableHelpers.GEN_RECUR:
-            backup_file(ledger_path)
-
-            status = helper(ledger_path, recurring_tx_path, term)
+            if report_missing(term, ledger_path, recurring_tx_path):
+                status = STATUS.WAIT
+            else:
+                backup_file(ledger_path)
+                status = helper(ledger_path, recurring_tx_path, term)
 
         else:
             raise NotImplementedError

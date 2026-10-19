@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Callable, cast
+from typing import TYPE_CHECKING, cast
 
 from hhelper.helpers.clean_up_journal import clean_up_journal
 from hhelper.helpers.clear_tx import clear_tx
