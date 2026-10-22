@@ -46,11 +46,11 @@ hh
 
 ## Screenshots
 
-![Main menu](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/dev/screenshots/main.png?raw=true)
-![Clean up journal](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/dev/screenshots/clean.png?raw=true)
-![Clearing transaction](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/dev/screenshots/clear.png?raw=true)
-![Fetching prices](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/dev/screenshots/fetch.png?raw=true)
-![Generating recurring transaction](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/dev/screenshots/gen_recur.png?raw=true)
+![Main menu](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/main/screenshots/main.png?raw=true)
+![Clean up journal](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/main/screenshots/clean.png?raw=true)
+![Clearing transaction](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/main/screenshots/clear.png?raw=true)
+![Fetching prices](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/main/screenshots/fetch.png?raw=true)
+![Generating recurring transaction](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/main/screenshots/gen_recur.png?raw=true)
 ---
 
 ## 🛠️ Usage
