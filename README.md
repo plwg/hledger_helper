@@ -70,6 +70,10 @@ Once you've launched **hhelper**, you'll be greeted with a user-friendly menu wh
    Generate recurring transactions based on a period expression. Preview the transactions before appending them to your journal.
 
 
+### Finding similar names
+
+`hh --similar` lists descriptions and accounts that look like variants of each other, such as `Whole Foods` and `Whole Food`, and explains how to fix them. It changes nothing.
+
 ## ⚙️ Configuration
 
 **hhelper** requires a `config.toml` file located at `~/.config/hhelper/config.toml`. This file should define the paths to your ledger, price, header, and recurring transaction files. Here's an example configuration:

@@ -1,3 +1,5 @@
+import argparse
+import sys
 import tomllib
 from collections.abc import Callable
 from pathlib import Path
@@ -12,6 +14,7 @@ from hhelper.helpers.options import (
     get_selected_option,
 )
 from hhelper.helpers.return_status import STATUS
+from hhelper.helpers.similar_report import HledgerError, similar_report
 from hhelper.ui.display import move_y, press_key_to_continue
 from hhelper.ui.menu import menu
 
@@ -29,7 +32,29 @@ def report_missing(term: Terminal, *paths: Path) -> bool:
     return bool(missing)
 
 
-def main() -> None:
+def print_similar_report(ledger_path: Path) -> None:
+    if not ledger_path.is_file():
+        sys.exit(f"File not found: {ledger_path}")
+
+    try:
+        print(similar_report(ledger_path))
+    except HledgerError as error:
+        print(error, file=sys.stderr)
+        sys.exit(f"hledger cannot read {ledger_path}")
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        prog="hh", description="Helper functions for hledger plain text accounting."
+    )
+    parser.add_argument(
+        "--similar",
+        action="store_true",
+        help="list descriptions and accounts that look like variants of each"
+        " other, then exit; nothing is changed",
+    )
+    args = parser.parse_args(argv)
+
     config_path = Path().home() / ".config" / "hhelper" / "config.toml"
 
     try:
@@ -54,6 +79,10 @@ def main() -> None:
     # Optional here; Clean Up Journal explains what to do when it is missing
     header_path = directory / paths["header_file"] if "header_file" in paths else None
     recurring_tx_path = directory / paths["recurring_tx_file"]
+
+    if args.similar:
+        print_similar_report(ledger_path)
+        return
 
     term = Terminal()
 
