@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import difflib
-import os
 import re
 import subprocess
 from typing import TYPE_CHECKING
@@ -27,8 +26,8 @@ _FILE_SCOPED_DIRECTIVE = re.compile(
 
 
 def header_start(
-    ledger_path: Path,
     header_path: Path,
+    header_include: str,
     header_content: str,
     ledger_text: str,
     term: Terminal,
@@ -59,10 +58,9 @@ def header_start(
         kept = [line for line in ledger_directives if line not in header_lines]
         return "".join(f"{line}\n" for line in kept) + header_content + "\n"
 
-    # Absolute, as configured (symlinks are not resolved)
-    absolute = os.path.abspath(header_path)
-    print(term.bold_white(f"Included the header file {header_path}"))
-    return "".join(f"{line}\n" for line in ledger_directives) + f"include {absolute}\n"
+    print(term.bold_white(f"Included the header file {header_include}"))
+    include = f"include {header_include}\n"
+    return "".join(f"{line}\n" for line in ledger_directives) + include
 
 
 def clean_up_journal(
@@ -70,7 +68,10 @@ def clean_up_journal(
     header_path: Path | None,
     backup_ledger_path: Path,
     term: Terminal,
+    header_include: str | None = None,
 ) -> STATUS:
+    # header_include is the header's path for the include line, as written in
+    # the config (e.g. ~/finance/my.ledger.header); hledger resolves it
     # The header is the only way directives and comments survive clean-up, so
     # refuse rather than silently dropping them
     if header_path is None or not header_path.is_file():
@@ -152,7 +153,11 @@ def clean_up_journal(
         header_content = header_file.read()
 
     start = header_start(
-        ledger_path, header_path, header_content, ledger_path.read_text(), term
+        header_path,
+        header_include if header_include is not None else str(header_path),
+        header_content,
+        ledger_path.read_text(),
+        term,
     )
     sorted_ledger = f"{start}\n\n{sorted_ledger}"
 

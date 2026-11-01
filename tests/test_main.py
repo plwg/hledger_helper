@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from typing import TYPE_CHECKING
 
 import pytest
@@ -119,3 +120,36 @@ def test_missing_config_is_explained(
     hhelper.main([])
 
     assert "config file is not found" in capsys.readouterr().out
+
+
+@pytest.mark.skipif(shutil.which("hledger") is None, reason="hledger is not installed")
+def test_clean_up_includes_the_header_as_written_in_the_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, answers
+) -> None:
+    finance = tmp_path / "finance"
+    finance.mkdir()
+    (finance / "my.ledger.header").write_text("account assets:bank\n")
+    ledger = finance / "my.ledger"
+    ledger.write_text("2024-01-01 a\n    expenses:x  1 USD\n    assets:bank\n")
+    config_dir = tmp_path / ".config" / "hhelper"
+    config_dir.mkdir(parents=True)
+    (config_dir / "config.toml").write_text(
+        "[paths]\n"
+        'directory = "~/finance/"\n'
+        'ledger_file = "my.ledger"\n'
+        'price_file = "prices.txt"\n'
+        'header_file = "my.ledger.header"\n'
+        'recurring_tx_file = "recur.journal"\n'
+        "[commodities]\n"
+        "commodity_pairs = []\n"
+    )
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(hhelper, "Terminal", FakeTerminal)
+    choices = iter(["Clean Up Journal", "Exit"])
+    monkeypatch.setattr(hhelper, "menu", lambda options, term: next(choices))
+    answers("y")
+
+    with pytest.raises(SystemExit):
+        hhelper.main([])
+
+    assert ledger.read_text().startswith("include ~/finance/my.ledger.header\n")
