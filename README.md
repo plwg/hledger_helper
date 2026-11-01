@@ -25,7 +25,7 @@ Welcome to **hledger Helper (hhelper)**, a command-line tool for simplifying and
 
 ### Prerequisites
 - Python 3.11 or higher
-- [hledger](https://hledger.org/) 1.25 or higher
+- [hledger](https://hledger.org/) 1.52 or higher (CI tests 1.52.4 and the 2.0 pre-release 1.99.5)
 - A valid `config.toml` file in `~/.config/hhelper/` (see [example config](https://github.com/plwg/hledger_helper))
 
 ### Installation

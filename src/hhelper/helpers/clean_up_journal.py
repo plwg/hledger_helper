@@ -25,6 +25,18 @@ _FILE_SCOPED_DIRECTIVE = re.compile(
 )
 
 
+def _commodity_lines(directives: list[str]) -> list[str]:
+    # The last D line sets how hledger reads ambiguous amounts such as 5,00 in
+    # every commodity, so once differing D lines sit together at the top, the
+    # amounts of all but the last one's commodity can be misread (5,00 EUR as
+    # 500 after D 1,000.00 USD). A commodity directive fixes how its own
+    # commodity is read, wherever it is
+    d_lines = list(dict.fromkeys(line for line in directives if line.startswith("D")))
+    if len(d_lines) < 2:
+        return []
+    return [f"commodity {line[1:].strip()}" for line in d_lines]
+
+
 def header_start(
     header_path: Path,
     header_include: str,
@@ -56,11 +68,13 @@ def header_start(
         # Lines the copied header already has are not repeated
         header_lines = set(header_content.splitlines())
         kept = [line for line in ledger_directives if line not in header_lines]
+        kept += _commodity_lines(kept + file_scoped)
         return "".join(f"{line}\n" for line in kept) + header_content + "\n"
 
     print(term.bold_white(f"Included the header file {header_include}"))
     include = f"include {header_include}\n"
-    return "".join(f"{line}\n" for line in ledger_directives) + include
+    kept = ledger_directives + _commodity_lines(ledger_directives)
+    return "".join(f"{line}\n" for line in kept) + include
 
 
 def clean_up_journal(
