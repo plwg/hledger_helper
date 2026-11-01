@@ -7,8 +7,9 @@ directory = "~/finance/"
 ledger_file = "my.ledger"
 
 # Directives (account, commodity, ...) for the ledger. Clean Up Journal drops
-# directives from the ledger and starts it with an include of this file, or a
-# copy of it if it has alias, apply account, Y or D directives.
+# directives from the ledger, except default commodity (D) lines, and starts it
+# with an include of this file, or a copy of it if it has alias, apply account,
+# Y or D directives.
 header_file = "my.ledger.header"
 # Where to download the price information to.
 price_file = "fetched_prices.txt"

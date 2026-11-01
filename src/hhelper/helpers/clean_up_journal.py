@@ -25,12 +25,24 @@ _FILE_SCOPED_DIRECTIVE = re.compile(
 )
 
 
+# Default commodity lines, which clean-up keeps in the ledger as written
+_DEFAULT_COMMODITY = re.compile(r"D(?:\s|$)")
+
+
 def header_start(
-    ledger_path: Path, header_path: Path, header_content: str, term: Terminal
+    ledger_path: Path,
+    header_path: Path,
+    header_content: str,
+    ledger_text: str,
+    term: Terminal,
 ) -> str:
-    # What the cleaned ledger starts with. Including the header keeps one copy
-    # of its directives, which every command then reads; a header with
+    # What the cleaned ledger starts with: the ledger's own default commodity
+    # (D) lines, untouched, then the header. Including the header keeps one
+    # copy of its directives, which every command then reads; a header with
     # file-scoped directives has to be copied in for them to apply
+    default_commodity = [
+        line for line in ledger_text.splitlines() if _DEFAULT_COMMODITY.match(line)
+    ]
     file_scoped = [
         line
         for line in header_content.splitlines()
@@ -45,11 +57,14 @@ def header_start(
                 " within the file they are in"
             )
         )
-        return header_content + "\n"
+        # Lines the copied header already has are not repeated
+        header_lines = set(header_content.splitlines())
+        kept = [line for line in default_commodity if line not in header_lines]
+        return "".join(f"{line}\n" for line in kept) + header_content + "\n"
 
     relative = os.path.relpath(header_path.resolve(), ledger_path.resolve().parent)
     print(term.bold_white(f"Included the header file {header_path}"))
-    return f"include {relative}\n"
+    return "".join(f"{line}\n" for line in default_commodity) + f"include {relative}\n"
 
 
 def clean_up_journal(
@@ -86,9 +101,10 @@ def clean_up_journal(
             "- All amounts are shown explicity. Balance assignments are converted into balance assertions.",
             "- Amounts are renormalized to commodity display style.",
             "- All decimal places are shown.",
-            "- Directives and inter-transaction comments in the ledger are lost; keep",
-            "  directives in the header file, which the ledger then includes (or copies",
-            "  in, if it has alias, apply account, Y or D directives).",
+            "- Directives and inter-transaction comments in the ledger are lost, except",
+            "  default commodity (D) lines, which are kept as written. Keep directives in",
+            "  the header file, which the ledger then includes (or copies in, if it has",
+            "  alias, apply account, Y or D directives).",
             "- Valuation affects posting amounts but not balance assertion or balance assignment amounts",
             "  potentially causing those to fail.",
             "- Auto postings can generate postings with too many missing amounts.",
@@ -136,7 +152,10 @@ def clean_up_journal(
     with header_path.open() as header_file:
         header_content = header_file.read()
 
-    sorted_ledger = f"{header_start(ledger_path, header_path, header_content, term)}\n\n{sorted_ledger}"
+    start = header_start(
+        ledger_path, header_path, header_content, ledger_path.read_text(), term
+    )
+    sorted_ledger = f"{start}\n\n{sorted_ledger}"
 
     returncode, cleaned_print, err = run_hledger_on_text(
         ("print", "-x"), sorted_ledger, ledger_path

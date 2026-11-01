@@ -133,6 +133,83 @@ def test_header_with_file_scoped_directives_is_copied(
     assert "hledger only applies" in capsys.readouterr().out
 
 
+DEFAULT_COMMODITY_JOURNAL = """\
+D 1.000,00 EUR  ; default currency
+account assets:bank
+
+2024-01-02 later
+    expenses:food  12,5
+    assets:bank
+
+2024-01-01 earlier
+    expenses:rent  1.000
+    assets:bank
+"""
+
+
+@requires_hledger
+def test_default_commodity_line_is_kept_as_written(files, term, answers) -> None:
+    ledger, header = files
+    ledger.write_text(DEFAULT_COMMODITY_JOURNAL)
+    before = hledger_print(ledger)
+    answers("y")
+
+    assert clean_up_journal(ledger, header, ledger, term) == STATUS.WAIT
+
+    assert ledger.read_text().startswith(
+        "D 1.000,00 EUR  ; default currency\ninclude my.ledger.header\n"
+    )
+    assert hledger_print(ledger) == before
+
+    once = ledger.read_text()
+    answers("y")
+    clean_up_journal(ledger, header, ledger, term)
+    assert ledger.read_text() == once
+
+
+@requires_hledger
+def test_default_commodity_in_a_copied_header_is_not_repeated(
+    files, term, answers
+) -> None:
+    ledger, header = files
+    header.write_text("D 1.000,00 EUR\naccount assets:bank\n")
+    ledger.write_text(
+        "D 1.000,00 EUR\naccount assets:bank\n\n"
+        + DEFAULT_COMMODITY_JOURNAL.split("\n\n", 1)[1]
+    )
+    answers("y")
+
+    clean_up_journal(ledger, header, ledger, term)
+
+    assert ledger.read_text().count("D 1.000,00 EUR") == 1
+
+
+@requires_hledger
+def test_default_commodity_lines_between_transactions_are_kept_in_order(
+    files, term, answers
+) -> None:
+    # Cleaned amounts carry their commodity, so moving the D lines to the top
+    # changes nothing for them; a new amount at the end still gets the last D
+    ledger, header = files
+    original = (
+        "D 1.000,00 EUR\n\n"
+        "2024-01-01 a\n    expenses:food  5\n    assets:bank\n\n"
+        "D 1,000.00 USD\n\n"
+        "2024-01-02 b\n    expenses:food  7\n    assets:bank\n"
+    )
+    ledger.write_text(original)
+    before = hledger_print(ledger)
+    answers("y")
+
+    assert clean_up_journal(ledger, header, ledger, term) == STATUS.WAIT
+    assert ledger.read_text().startswith("D 1.000,00 EUR\nD 1,000.00 USD\n")
+    assert hledger_print(ledger) == before
+
+    new_entry = "\n2024-01-03 c\n    expenses:food  9\n    assets:bank\n"
+    ledger.write_text(ledger.read_text() + new_entry)
+    assert "9.00 USD" in hledger(ledger, "print", "date:2024-01-03")
+
+
 @requires_hledger
 def test_declining_changes_nothing(files, term, answers) -> None:
     ledger, header = files
