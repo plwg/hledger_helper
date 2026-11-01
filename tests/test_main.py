@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.metadata
 import shutil
 from typing import TYPE_CHECKING
 
@@ -120,6 +121,51 @@ def test_missing_config_is_explained(
     hhelper.main([])
 
     assert "config file is not found" in capsys.readouterr().out
+
+
+def test_hh_config_prints_the_location_and_content(
+    run_main, capsys: pytest.CaptureFixture
+) -> None:
+    hhelper.main(["--config"])
+
+    out = capsys.readouterr().out
+    assert out.startswith(f"Config file: {run_main.config}\n\n")
+    assert out.endswith(run_main.config.read_text())
+
+
+def test_hh_config_prints_a_config_that_does_not_parse(
+    run_main, capsys: pytest.CaptureFixture
+) -> None:
+    run_main.config.write_text("[paths\nbroken = \n")
+
+    hhelper.main(["--config"])
+
+    assert capsys.readouterr().out.endswith("[paths\nbroken = \n")
+
+
+def test_hh_config_without_a_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    with pytest.raises(SystemExit, match="does not exist yet"):
+        hhelper.main(["--config"])
+
+    expected = tmp_path / ".config" / "hhelper" / "config.toml"
+    assert f"Config file: {expected}" in capsys.readouterr().out
+
+
+def test_hh_config_and_similar_cannot_be_combined() -> None:
+    with pytest.raises(SystemExit):
+        hhelper.main(["--config", "--similar"])
+
+
+def test_hh_version_prints_the_installed_version(capsys: pytest.CaptureFixture) -> None:
+    with pytest.raises(SystemExit) as exit_info:
+        hhelper.main(["--version"])
+
+    assert exit_info.value.code == 0
+    assert capsys.readouterr().out == f"hh {importlib.metadata.version('hhelper')}\n"
 
 
 @pytest.mark.skipif(shutil.which("hledger") is None, reason="hledger is not installed")
