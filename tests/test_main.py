@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.metadata
 from typing import TYPE_CHECKING
 
 import pytest
@@ -156,3 +157,11 @@ def test_hh_config_without_a_config(
 def test_hh_config_and_similar_cannot_be_combined() -> None:
     with pytest.raises(SystemExit):
         hhelper.main(["--config", "--similar"])
+
+
+def test_hh_version_prints_the_installed_version(capsys: pytest.CaptureFixture) -> None:
+    with pytest.raises(SystemExit) as exit_info:
+        hhelper.main(["--version"])
+
+    assert exit_info.value.code == 0
+    assert capsys.readouterr().out == f"hh {importlib.metadata.version('hhelper')}\n"

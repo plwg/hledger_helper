@@ -1,6 +1,7 @@
 import argparse
 import sys
 import tomllib
+from importlib.metadata import PackageNotFoundError, version
 from collections.abc import Callable
 from pathlib import Path
 from typing import cast
@@ -43,6 +44,14 @@ def print_similar_report(ledger_path: Path) -> None:
         sys.exit(f"hledger cannot read {ledger_path}")
 
 
+def installed_version() -> str:
+    # The installed package's version, which may differ from the source tree
+    try:
+        return version("hhelper")
+    except PackageNotFoundError:
+        return "unknown (not installed)"
+
+
 def print_config(config_path: Path) -> None:
     # The location, then the file as written; works even if it does not parse
     print(f"Config file: {config_path}")
@@ -60,6 +69,9 @@ def print_config(config_path: Path) -> None:
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="hh", description="Helper functions for hledger plain text accounting."
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"hh {installed_version()}"
     )
     actions = parser.add_mutually_exclusive_group()
     actions.add_argument(
