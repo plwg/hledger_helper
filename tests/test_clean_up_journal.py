@@ -226,6 +226,68 @@ def test_default_commodity_lines_between_transactions_are_kept_in_order(
 
 
 @requires_hledger
+@pytest.mark.parametrize(
+    ("directives", "new_entry", "expected"),
+    [
+        (
+            "alias food = expenses:food\n",
+            "2025-06-01 n\n    food  3 USD\n    assets:bank\n",
+            "expenses:food",
+        ),
+        (
+            "alias food = expenses:food\nend aliases\n",
+            "2025-06-01 n\n    food  3 USD\n    assets:bank\n",
+            "    food",
+        ),
+        (
+            "apply account personal\nend apply account\n",
+            "2025-06-01 n\n    food  3 USD\n    assets:bank\n",
+            "    food",
+        ),
+        (
+            "Y 2025\n",
+            "06-01 n\n    food  3 USD\n    assets:bank\n",
+            "2025-06-01",
+        ),
+    ],
+)
+def test_file_scoped_directives_in_the_ledger_are_kept(
+    files, term, answers, directives: str, new_entry: str, expected: str
+) -> None:
+    ledger, header = files
+    ledger.write_text(directives + "\n" + TRANSACTIONS)
+    before = hledger_print(ledger)
+    answers("y")
+
+    assert clean_up_journal(ledger, header, ledger, term) == STATUS.WAIT
+    assert ledger.read_text().startswith(directives + f"include {header}\n")
+    assert hledger_print(ledger) == before
+
+    # An entry added later is read as it would have been before clean-up
+    ledger.write_text(ledger.read_text() + "\n" + new_entry)
+    assert expected in hledger(ledger, "print", "date:2025-06-01")
+
+
+@requires_hledger
+@pytest.mark.parametrize(
+    "directive", ["apply account personal", "alias /food/ = expenses:food"]
+)
+def test_directives_that_would_apply_twice_are_refused(
+    files, term, answers, capsys: pytest.CaptureFixture, directive: str
+) -> None:
+    # Cleaned transactions already carry their effect; keeping these at the top
+    # would apply them again (personal:personal:food), so nothing is written
+    ledger, header = files
+    original = f"{directive}\n\n2024-01-01 a\n    food  12 USD\n    assets:bank\n"
+    ledger.write_text(original)
+    answers("y")
+
+    assert clean_up_journal(ledger, header, ledger, term) == STATUS.WAIT
+    assert ledger.read_text() == original
+    assert "would read differently" in capsys.readouterr().out
+
+
+@requires_hledger
 def test_declining_changes_nothing(files, term, answers) -> None:
     ledger, header = files
     original = ledger.read_text()

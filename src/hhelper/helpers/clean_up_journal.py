@@ -19,14 +19,11 @@ if TYPE_CHECKING:
 
 
 # Directives that hledger applies only within their own file (and the files it
-# includes), so they do not reach the ledger from an included header
+# includes). They do not reach the ledger from an included header, and
+# clean-up keeps the ledger's own as written, since hledger print drops them
 _FILE_SCOPED_DIRECTIVE = re.compile(
     r"(?:alias|end aliases|apply account|end apply account|apply year|year|Y|D)(?:\s|\d|$)"
 )
-
-
-# Default commodity lines, which clean-up keeps in the ledger as written
-_DEFAULT_COMMODITY = re.compile(r"D(?:\s|$)")
 
 
 def header_start(
@@ -36,12 +33,12 @@ def header_start(
     ledger_text: str,
     term: Terminal,
 ) -> str:
-    # What the cleaned ledger starts with: the ledger's own default commodity
-    # (D) lines, untouched, then the header. Including the header keeps one
-    # copy of its directives, which every command then reads; a header with
-    # file-scoped directives has to be copied in for them to apply
-    default_commodity = [
-        line for line in ledger_text.splitlines() if _DEFAULT_COMMODITY.match(line)
+    # What the cleaned ledger starts with: the ledger's own file-scoped
+    # directives, untouched and in order, then the header. Including the header
+    # keeps one copy of its directives, which every command then reads; a
+    # header with file-scoped directives has to be copied in for them to apply
+    ledger_directives = [
+        line for line in ledger_text.splitlines() if _FILE_SCOPED_DIRECTIVE.match(line)
     ]
     file_scoped = [
         line
@@ -59,13 +56,13 @@ def header_start(
         )
         # Lines the copied header already has are not repeated
         header_lines = set(header_content.splitlines())
-        kept = [line for line in default_commodity if line not in header_lines]
+        kept = [line for line in ledger_directives if line not in header_lines]
         return "".join(f"{line}\n" for line in kept) + header_content + "\n"
 
     # Absolute, as configured (symlinks are not resolved)
     absolute = os.path.abspath(header_path)
     print(term.bold_white(f"Included the header file {header_path}"))
-    return "".join(f"{line}\n" for line in default_commodity) + f"include {absolute}\n"
+    return "".join(f"{line}\n" for line in ledger_directives) + f"include {absolute}\n"
 
 
 def clean_up_journal(
@@ -103,9 +100,10 @@ def clean_up_journal(
             "- Amounts are renormalized to commodity display style.",
             "- All decimal places are shown.",
             "- Directives and inter-transaction comments in the ledger are lost, except",
-            "  default commodity (D) lines, which are kept as written. Keep directives in",
-            "  the header file, which the ledger then includes (or copies in, if it has",
-            "  alias, apply account, Y or D directives).",
+            "  alias, apply account, Y and D lines (and their end lines), which hledger",
+            "  applies only within their own file: they are kept as written, at the top.",
+            "  Keep other directives in the header file, which the ledger then includes",
+            "  (or copies in, if it has alias, apply account, Y or D directives).",
             "- Valuation affects posting amounts but not balance assertion or balance assignment amounts",
             "  potentially causing those to fail.",
             "- Auto postings can generate postings with too many missing amounts.",
