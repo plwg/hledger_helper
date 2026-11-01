@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 import tomllib
 from importlib.metadata import PackageNotFoundError, version
@@ -114,6 +115,12 @@ def main(argv: list[str] | None = None) -> None:
     price_path = directory / paths["price_file"]
     # Optional here; Clean Up Journal explains what to do when it is missing
     header_path = directory / paths["header_file"] if "header_file" in paths else None
+    # As written in the config, unexpanded, for the ledger's include line
+    header_include = (
+        os.path.join(paths["directory"], paths["header_file"])
+        if "header_file" in paths
+        else None
+    )
     recurring_tx_path = directory / paths["recurring_tx_file"]
 
     if args.similar:
@@ -158,7 +165,9 @@ def main(argv: list[str] | None = None) -> None:
                 back_up_path = backup_file(ledger_path)
                 if header_path is not None and header_path.is_file():
                     backup_file(header_path)
-                status = helper(ledger_path, header_path, back_up_path, term)
+                status = helper(
+                    ledger_path, header_path, back_up_path, term, header_include
+                )
 
         elif name == AvailableHelpers.GEN_RECUR:
             if report_missing(term, ledger_path, recurring_tx_path):

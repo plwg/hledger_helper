@@ -105,7 +105,24 @@ def test_running_twice_changes_nothing_more(files, term, answers) -> None:
 
 
 @requires_hledger
-def test_header_in_another_directory_is_included_by_absolute_path(
+def test_header_is_included_with_the_path_as_configured(
+    tmp_path: Path, files, term, answers, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Not expanded or made absolute: hledger expands ~ itself
+    ledger, header = files
+    monkeypatch.setenv("HOME", str(tmp_path.parent))
+    configured = f"~/{tmp_path.name}/my.ledger.header"
+    before = hledger_print(ledger)
+    answers("y")
+
+    assert clean_up_journal(ledger, header, ledger, term, configured) == STATUS.WAIT
+    assert ledger.read_text().startswith(f"include {configured}\n")
+    assert hledger_print(ledger) == before
+    assert "assets:bank" in hledger(ledger, "accounts", "--declared")
+
+
+@requires_hledger
+def test_header_in_another_directory_is_included_by_its_path(
     tmp_path: Path, files, term, answers
 ) -> None:
     ledger, _ = files
