@@ -24,6 +24,7 @@ No uv yet? `curl -LsSf https://astral.sh/uv/install.sh | sh`
 |---|---|
 | `hh` | Open the menu |
 | `hh --similar` | List descriptions and accounts that look like variants of each other (e.g. `Whole Foods` / `Whole Food`) and how to fix them; changes nothing |
+| `hh --web` | Serve a local page (http://127.0.0.1:8765, `--port` to change) to preview bank CSVs through hledger rules files and edit those rules; changes no journal |
 | `hh --config` | Print the config file's location and content |
 | `hh --version` | Print the version |
 
@@ -45,6 +46,8 @@ commodity_pairs = [
     { symbol = "BTC-USD", base_currency = "USD", quote_currency = "BTC", is_append_space = false },
 ]
 ```
+
+`hh --web` lists the `*.rules` files under `rules_directory` (optional, relative to `directory`, which is the default). An uploaded CSV gets the rules file named after it (`bank.csv` → `bank.csv.rules`) or whose name it contains (`bank (2).csv`); the drop-down overrides that. Unmatched transactions (hledger's `expenses:unknown` / `income:unknown`) are highlighted with a button to add a rule for them.
 
 Clean Up Journal drops directives and comments, so keep them in the header file, which the cleaned journal includes.
 

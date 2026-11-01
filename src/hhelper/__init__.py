@@ -19,6 +19,7 @@ from hhelper.helpers.return_status import STATUS
 from hhelper.helpers.similar_report import HledgerError, similar_report
 from hhelper.ui.display import move_y, press_key_to_continue
 from hhelper.ui.menu import menu
+from hhelper.web.server import serve
 
 
 def report_missing(term: Terminal, *paths: Path) -> bool:
@@ -86,6 +87,18 @@ def main(argv: list[str] | None = None) -> None:
         help="list descriptions and accounts that look like variants of each"
         " other, then exit; nothing is changed",
     )
+    actions.add_argument(
+        "--web",
+        action="store_true",
+        help="serve a local page for previewing bank CSVs with hledger rules"
+        " files and editing those rules",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8765,
+        help="port for --web (default: %(default)s; 0 picks a free one)",
+    )
     args = parser.parse_args(argv)
 
     config_path = Path().home() / ".config" / "hhelper" / "config.toml"
@@ -125,6 +138,17 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.similar:
         print_similar_report(ledger_path)
+        return
+
+    if args.web:
+        # Relative to directory; defaults to it, searched including subfolders
+        rules_dir = directory / Path(paths.get("rules_directory", ".")).expanduser()
+        if not rules_dir.is_dir():
+            sys.exit(f"Rules folder not found: {rules_dir}")
+        try:
+            serve(rules_dir.resolve(), args.port)
+        except OSError as error:
+            sys.exit(f"Cannot start the server on port {args.port}: {error}")
         return
 
     term = Terminal()

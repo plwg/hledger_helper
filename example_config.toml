@@ -15,6 +15,9 @@ header_file = "my.ledger.header"
 price_file = "fetched_prices.txt"
 # A file to store recurring transaction.
 recurring_tx_file = "recur_tx.journal"
+# Optional: where hh --web looks for hledger CSV rules files (*.rules),
+# including subfolders. Relative to directory; defaults to directory itself.
+rules_directory = "csv"
 
 [commodities]
 # Each symbol is a commodity that will be fetched by yfinance.
