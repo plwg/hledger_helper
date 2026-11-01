@@ -2,8 +2,8 @@ import argparse
 import os
 import sys
 import tomllib
-from importlib.metadata import PackageNotFoundError, version
 from collections.abc import Callable
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import cast
 

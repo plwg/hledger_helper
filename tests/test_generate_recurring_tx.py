@@ -26,7 +26,7 @@ def recurring(tmp_path: Path) -> Path:
 def is_valid(path: Path) -> bool:
     return (
         subprocess.run(
-            ["hledger", "check", "-f", str(path)], capture_output=True
+            ["hledger", "check", "-f", str(path)], capture_output=True, check=False
         ).returncode
         == 0
     )
