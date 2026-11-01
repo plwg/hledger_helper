@@ -23,6 +23,15 @@ TRANSACTIONS = """\
 """
 
 
+def hledger(path: Path, *args: str) -> str:
+    return subprocess.run(
+        ["hledger", *args, "-f", str(path)],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+
+
 def hledger_print(path: Path) -> str:
     return subprocess.run(
         ["hledger", "print", "-x", "-f", str(path)],
@@ -42,7 +51,7 @@ def files(tmp_path: Path) -> tuple[Path, Path]:
 
 
 @requires_hledger
-def test_sorts_and_keeps_the_header(files, term, answers) -> None:
+def test_sorts_and_includes_the_header(files, term, answers) -> None:
     ledger, header = files
     before = hledger_print(ledger)
     answers("y")
@@ -50,9 +59,78 @@ def test_sorts_and_keeps_the_header(files, term, answers) -> None:
     assert clean_up_journal(ledger, header, ledger, term) == STATUS.WAIT
 
     text = ledger.read_text()
-    assert text.startswith("account assets:bank\n")
+    # The header's directives are read from the header file, not copied
+    assert text.startswith("include my.ledger.header\n")
+    assert "account assets:bank" not in text
     assert text.index("earlier") < text.index("later")
     assert hledger_print(ledger) == before
+    assert "assets:bank" in hledger(ledger, "accounts", "--declared")
+
+
+@requires_hledger
+def test_header_changes_are_seen_without_another_clean_up(files, term, answers) -> None:
+    ledger, header = files
+    answers("y")
+    clean_up_journal(ledger, header, ledger, term)
+
+    header.write_text(header.read_text() + "account expenses:new\n")
+
+    assert "expenses:new" in hledger(ledger, "accounts", "--declared")
+
+
+@requires_hledger
+def test_running_twice_changes_nothing_more(files, term, answers) -> None:
+    ledger, header = files
+    answers("y")
+    clean_up_journal(ledger, header, ledger, term)
+    once = ledger.read_text()
+    answers("y")
+    clean_up_journal(ledger, header, ledger, term)
+
+    assert ledger.read_text() == once
+
+
+@requires_hledger
+def test_header_in_another_directory_is_included_by_relative_path(
+    tmp_path: Path, files, term, answers
+) -> None:
+    ledger, _ = files
+    (tmp_path / "config").mkdir()
+    header = tmp_path / "config" / "header.journal"
+    header.write_text("account assets:bank\n")
+    answers("y")
+
+    assert clean_up_journal(ledger, header, ledger, term) == STATUS.WAIT
+    assert ledger.read_text().startswith("include config/header.journal\n")
+
+
+@requires_hledger
+@pytest.mark.parametrize(
+    "directive",
+    [
+        "alias food = expenses:food",
+        "apply account personal",
+        "Y 2024",
+        "D 1,000.00 USD",
+    ],
+)
+def test_header_with_file_scoped_directives_is_copied(
+    files, term, answers, capsys: pytest.CaptureFixture, directive: str
+) -> None:
+    # hledger applies these only within their own file, so they would not
+    # reach the ledger's transactions from an included header
+    ledger, header = files
+    header_text = f"account assets:bank\n{directive}\n"
+    header.write_text(header_text)
+    ledger.write_text(header_text + "\n" + TRANSACTIONS)
+    before = hledger_print(ledger)
+    answers("y")
+
+    assert clean_up_journal(ledger, header, ledger, term) == STATUS.WAIT
+    assert ledger.read_text().startswith(header_text)
+    assert "include" not in ledger.read_text()
+    assert hledger_print(ledger) == before
+    assert "hledger only applies" in capsys.readouterr().out
 
 
 @requires_hledger

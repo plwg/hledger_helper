@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import difflib
+import os
+import re
 import subprocess
 from typing import TYPE_CHECKING
 
@@ -14,6 +16,40 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from blessed import Terminal
+
+
+# Directives that hledger applies only within their own file (and the files it
+# includes), so they do not reach the ledger from an included header
+_FILE_SCOPED_DIRECTIVE = re.compile(
+    r"(?:alias|end aliases|apply account|end apply account|apply year|year|Y|D)(?:\s|\d|$)"
+)
+
+
+def header_start(
+    ledger_path: Path, header_path: Path, header_content: str, term: Terminal
+) -> str:
+    # What the cleaned ledger starts with. Including the header keeps one copy
+    # of its directives, which every command then reads; a header with
+    # file-scoped directives has to be copied in for them to apply
+    file_scoped = [
+        line
+        for line in header_content.splitlines()
+        if _FILE_SCOPED_DIRECTIVE.match(line)
+    ]
+
+    if file_scoped:
+        print(
+            term.bold_white(
+                f"Copied the header file {header_path} into the ledger: it has"
+                f" {file_scoped[0].split()[0]} directives, which hledger only applies"
+                " within the file they are in"
+            )
+        )
+        return header_content + "\n"
+
+    relative = os.path.relpath(header_path.resolve(), ledger_path.resolve().parent)
+    print(term.bold_white(f"Included the header file {header_path}"))
+    return f"include {relative}\n"
 
 
 def clean_up_journal(
@@ -50,7 +86,9 @@ def clean_up_journal(
             "- All amounts are shown explicity. Balance assignments are converted into balance assertions.",
             "- Amounts are renormalized to commodity display style.",
             "- All decimal places are shown.",
-            "- Directives and inter-transaction comments are lost.",
+            "- Directives and inter-transaction comments in the ledger are lost; keep",
+            "  directives in the header file, which the ledger then includes (or copies",
+            "  in, if it has alias, apply account, Y or D directives).",
             "- Valuation affects posting amounts but not balance assertion or balance assignment amounts",
             "  potentially causing those to fail.",
             "- Auto postings can generate postings with too many missing amounts.",
@@ -95,13 +133,10 @@ def clean_up_journal(
     # NOTE: There is no need to account for header here since it is not in the hledger print's output
     sorted_ledger = align_amounts(sorted_ledger)
 
-    # Read the header file
     with header_path.open() as header_file:
         header_content = header_file.read()
-    print(term.bold_white(f"Read header file from {header_path}"))
 
-    # Check the result ledger
-    sorted_ledger = f"{header_content}\n\n\n{sorted_ledger}"
+    sorted_ledger = f"{header_start(ledger_path, header_path, header_content, term)}\n\n{sorted_ledger}"
 
     returncode, cleaned_print, err = run_hledger_on_text(
         ("print", "-x"), sorted_ledger, ledger_path
