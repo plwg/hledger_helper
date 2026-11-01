@@ -60,7 +60,7 @@ def test_sorts_and_includes_the_header(files, term, answers) -> None:
 
     text = ledger.read_text()
     # The header's directives are read from the header file, not copied
-    assert text.startswith("include my.ledger.header\n")
+    assert text.startswith(f"include {header}\n")
     assert "account assets:bank" not in text
     assert text.index("earlier") < text.index("later")
     assert hledger_print(ledger) == before
@@ -79,6 +79,20 @@ def test_header_changes_are_seen_without_another_clean_up(files, term, answers) 
 
 
 @requires_hledger
+def test_ledger_still_finds_the_header_after_moving(
+    tmp_path: Path, files, term, answers
+) -> None:
+    # The include does not depend on where the ledger is
+    ledger, header = files
+    answers("y")
+    clean_up_journal(ledger, header, ledger, term)
+    (tmp_path / "elsewhere").mkdir()
+    moved = ledger.rename(tmp_path / "elsewhere" / "my.ledger")
+
+    assert "assets:bank" in hledger(moved, "accounts", "--declared")
+
+
+@requires_hledger
 def test_running_twice_changes_nothing_more(files, term, answers) -> None:
     ledger, header = files
     answers("y")
@@ -91,7 +105,7 @@ def test_running_twice_changes_nothing_more(files, term, answers) -> None:
 
 
 @requires_hledger
-def test_header_in_another_directory_is_included_by_relative_path(
+def test_header_in_another_directory_is_included_by_absolute_path(
     tmp_path: Path, files, term, answers
 ) -> None:
     ledger, _ = files
@@ -101,7 +115,8 @@ def test_header_in_another_directory_is_included_by_relative_path(
     answers("y")
 
     assert clean_up_journal(ledger, header, ledger, term) == STATUS.WAIT
-    assert ledger.read_text().startswith("include config/header.journal\n")
+    assert ledger.read_text().startswith(f"include {header}\n")
+    assert header.is_absolute()
 
 
 @requires_hledger
@@ -157,7 +172,7 @@ def test_default_commodity_line_is_kept_as_written(files, term, answers) -> None
     assert clean_up_journal(ledger, header, ledger, term) == STATUS.WAIT
 
     assert ledger.read_text().startswith(
-        "D 1.000,00 EUR  ; default currency\ninclude my.ledger.header\n"
+        f"D 1.000,00 EUR  ; default currency\ninclude {header}\n"
     )
     assert hledger_print(ledger) == before
 

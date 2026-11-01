@@ -62,9 +62,10 @@ def header_start(
         kept = [line for line in default_commodity if line not in header_lines]
         return "".join(f"{line}\n" for line in kept) + header_content + "\n"
 
-    relative = os.path.relpath(header_path.resolve(), ledger_path.resolve().parent)
+    # Absolute, as configured (symlinks are not resolved)
+    absolute = os.path.abspath(header_path)
     print(term.bold_white(f"Included the header file {header_path}"))
-    return "".join(f"{line}\n" for line in default_commodity) + f"include {relative}\n"
+    return "".join(f"{line}\n" for line in default_commodity) + f"include {absolute}\n"
 
 
 def clean_up_journal(
