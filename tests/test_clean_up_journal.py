@@ -220,8 +220,9 @@ def test_default_commodity_in_a_copied_header_is_not_repeated(
 def test_default_commodity_lines_between_transactions_are_kept_in_order(
     files, term, answers
 ) -> None:
-    # Cleaned amounts carry their commodity, so moving the D lines to the top
-    # changes nothing for them; a new amount at the end still gets the last D
+    # The last D line sets how ambiguous amounts (5,00) are read, so with both
+    # D lines at the top, commodity directives keep 5,00 EUR from reading as
+    # 500; a new amount at the end still gets the last D
     ledger, header = files
     original = (
         "D 1.000,00 EUR\n\n"
