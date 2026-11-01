@@ -76,7 +76,7 @@ Once you've launched **hhelper**, you'll be greeted with a user-friendly menu wh
 
 ## ⚙️ Configuration
 
-**hhelper** requires a `config.toml` file located at `~/.config/hhelper/config.toml`. This file should define the paths to your ledger, price, header, and recurring transaction files. Here's an example configuration:
+**hhelper** requires a `config.toml` file located at `~/.config/hhelper/config.toml`. This file should define the paths to your ledger, price, header, and recurring transaction files. `hh --config` prints where it is and what it contains. Here's an example configuration:
 
 ```toml
 [paths]

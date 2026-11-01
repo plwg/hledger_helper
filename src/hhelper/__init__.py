@@ -43,11 +43,31 @@ def print_similar_report(ledger_path: Path) -> None:
         sys.exit(f"hledger cannot read {ledger_path}")
 
 
+def print_config(config_path: Path) -> None:
+    # The location, then the file as written; works even if it does not parse
+    print(f"Config file: {config_path}")
+
+    if not config_path.is_file():
+        sys.exit(
+            "It does not exist yet. You can find an example config file at"
+            " https://github.com/plwg/hledger_helper"
+        )
+
+    print()
+    print(config_path.read_text(), end="")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="hh", description="Helper functions for hledger plain text accounting."
     )
-    parser.add_argument(
+    actions = parser.add_mutually_exclusive_group()
+    actions.add_argument(
+        "--config",
+        action="store_true",
+        help="print the config file's location and content, then exit",
+    )
+    actions.add_argument(
         "--similar",
         action="store_true",
         help="list descriptions and accounts that look like variants of each"
@@ -56,6 +76,10 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     config_path = Path().home() / ".config" / "hhelper" / "config.toml"
+
+    if args.config:
+        print_config(config_path)
+        return
 
     try:
         with config_path.open("rb") as config_file:
