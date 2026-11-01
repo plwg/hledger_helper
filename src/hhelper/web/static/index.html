@@ -108,6 +108,7 @@
   td.acct { font-family: var(--mono); font-size: 13px; }
   tr.unknown td { background: var(--warn-bg); }
   .tag { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 4px; background: var(--warn); color: var(--panel); }
+  #import-command { font: 13px var(--mono); word-break: break-all; padding: 6px 0; }
   pre.journal { font-family: var(--mono); font-size: 12px; overflow: auto; max-height: 60vh; margin: 0; }
   .tablewrap { overflow-x: auto; }
   .rules-layout { display: grid; grid-template-columns: 260px 1fr; gap: 16px; }
@@ -184,6 +185,14 @@
     </div>
 
     <div id="result" class="hidden">
+      <div class="panel" style="margin-top: 16px">
+        <div class="muted small">Run this in a terminal to import the transactions:</div>
+        <div class="row" style="margin-top: 6px; flex-wrap: nowrap; align-items: flex-start">
+          <code id="import-command" class="grow"></code>
+          <button class="btn" id="copy-command">Copy</button>
+        </div>
+        <div id="command-note" class="muted small hidden"></div>
+      </div>
       <div class="stats">
         <div class="stat"><b id="stat-total">0</b><span class="muted small">transactions</span></div>
         <div class="stat"><b id="stat-unknown">0</b><span class="muted small">without a matching rule</span></div>
@@ -387,6 +396,7 @@ async function runPreview(rulesContent) {
       return preview;
     }
     state.preview = preview;
+    state.previewUnsaved = rulesContent !== undefined;
     renderPreview();
     return preview;
   } catch (error) {
@@ -400,6 +410,15 @@ function renderPreview() {
   $("stat-total").textContent = transactions.length;
   $("stat-unknown").textContent = unknown.length;
   $("journal").textContent = journal;
+  $("import-command").textContent = state.preview.import_command;
+  const notes = [];
+  if (!state.preview.csv_found) {
+    notes.push("This file was not found in the rules folder; run it from the folder that has it, or put in its full path.");
+  }
+  if (state.previewUnsaved) {
+    notes.push("The command uses the saved rules file; save your edits first.");
+  }
+  showMessage($("command-note"), notes.join(" "));
   $("result").classList.remove("hidden");
 
   const onlyUnknown = $("only-unknown").checked;
@@ -452,6 +471,14 @@ $("toggle-journal").addEventListener("click", () => {
   $("journal-panel").classList.toggle("hidden", !state.showJournal);
   $("table-panel").classList.toggle("hidden", state.showJournal);
   $("toggle-journal").textContent = state.showJournal ? "Show table" : "Show journal";
+});
+$("copy-command").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(state.preview?.import_command || "");
+    toast("Command copied");
+  } catch {
+    toast("Copy failed; select the command and copy it");
+  }
 });
 $("copy-journal").addEventListener("click", async () => {
   try {

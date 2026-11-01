@@ -7,6 +7,7 @@ from dataclasses import asdict
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
+from pathlib import PurePath
 from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urlsplit
 
@@ -14,7 +15,9 @@ from hhelper.helpers.backup import backup_file
 from hhelper.helpers.safe_write import safe_write
 from hhelper.web.csv_import import (
     RulesPathError,
+    find_csv_on_disk,
     find_rules_files,
+    import_command,
     match_rules,
     preview_csv,
     resolve_rules_path,
@@ -47,8 +50,9 @@ def _mtime_ns(path: Path) -> str:
 
 class Api:
     # The page's operations, kept apart from HTTP so they can be tested directly
-    def __init__(self, rules_dir: Path) -> None:
+    def __init__(self, rules_dir: Path, ledger: Path | None = None) -> None:
         self.rules_dir = rules_dir
+        self.ledger = ledger
 
     def _resolve(self, relative: object) -> Path:
         if not isinstance(relative, str):
@@ -118,7 +122,13 @@ class Api:
         if rules_content is None and not path.is_file():
             raise ApiError(HTTPStatus.NOT_FOUND, f"No such rules file: {path.name}")
 
-        return asdict(preview_csv(csv_content, csv_name, path, rules_content))
+        result = asdict(preview_csv(csv_content, csv_name, path, rules_content))
+        csv_file = find_csv_on_disk(self.rules_dir, csv_name, csv_content)
+        result["csv_found"] = csv_file is not None
+        result["import_command"] = import_command(
+            self.ledger, csv_file or PurePath(csv_name).name, path
+        )
+        return result
 
 
 def make_handler(api: Api) -> type[BaseHTTPRequestHandler]:
@@ -214,13 +224,17 @@ def make_handler(api: Api) -> type[BaseHTTPRequestHandler]:
     return Handler
 
 
-def make_server(rules_dir: Path, port: int) -> ThreadingHTTPServer:
+def make_server(
+    rules_dir: Path, port: int, ledger: Path | None = None
+) -> ThreadingHTTPServer:
     # Bound to the loopback address only: the page edits files on this machine
-    return ThreadingHTTPServer(("127.0.0.1", port), make_handler(Api(rules_dir)))
+    return ThreadingHTTPServer(
+        ("127.0.0.1", port), make_handler(Api(rules_dir, ledger))
+    )
 
 
-def serve(rules_dir: Path, port: int) -> None:
-    server = make_server(rules_dir, port)
+def serve(rules_dir: Path, port: int, ledger: Path | None = None) -> None:
+    server = make_server(rules_dir, port, ledger)
     print(f"CSV import page: http://127.0.0.1:{server.server_address[1]}/")
     print(f"Rules folder: {rules_dir}")
     print("Press Ctrl-C to stop.")

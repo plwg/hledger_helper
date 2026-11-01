@@ -10,7 +10,9 @@ import pytest
 
 from hhelper.web.csv_import import (
     RulesPathError,
+    find_csv_on_disk,
     find_rules_files,
+    import_command,
     match_rules,
     preview_csv,
     resolve_rules_path,
@@ -235,3 +237,48 @@ def test_server_preview(server: int) -> None:
 
     assert status == 200
     assert len(data["transactions"]) == 2
+
+
+def test_import_command_quotes_paths(tmp_path: Path) -> None:
+    command = import_command(
+        tmp_path / "my journal.ledger", "bank (2).csv", tmp_path / "bank.rules"
+    )
+    assert command == (
+        f"hledger -f '{tmp_path}/my journal.ledger' import 'bank (2).csv'"
+        f" --rules {tmp_path}/bank.rules"
+    )
+    assert import_command(None, "a.csv", tmp_path / "b.rules").startswith(
+        "hledger import a.csv"
+    )
+
+
+def test_find_csv_on_disk_matches_name_and_content(rules_dir: Path) -> None:
+    (rules_dir / "card" / "card.csv").write_text(CSV)
+    (rules_dir / "other.csv").write_text("different")
+
+    assert find_csv_on_disk(rules_dir, "card.csv", CSV.encode()) == (
+        rules_dir / "card" / "card.csv"
+    )
+    assert find_csv_on_disk(rules_dir, "card.csv", b"changed") is None
+    assert find_csv_on_disk(rules_dir, "other.csv", CSV.encode()) is None
+
+
+@requires_hledger
+def test_api_preview_includes_import_command(rules_dir: Path) -> None:
+    (rules_dir / "card" / "card.csv").write_text(CSV)
+    ledger = rules_dir / "main.ledger"
+    api = Api(rules_dir, ledger)
+
+    result = api.preview(
+        {
+            "csv_name": "card.csv",
+            "csv_base64": base64.b64encode(CSV.encode()).decode(),
+            "rules": "card/card.csv.rules",
+        }
+    )
+
+    assert result["csv_found"] is True
+    assert result["import_command"] == (
+        f"hledger -f {ledger} import {rules_dir / 'card' / 'card.csv'}"
+        f" --rules {(rules_dir / 'card' / 'card.csv.rules').resolve()}"
+    )

@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import re
+import shlex
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
@@ -215,3 +216,26 @@ def preview_csv(
         journal=journal.stdout,
         transactions=_parse_print_csv(table.stdout) if table.returncode == 0 else [],
     )
+
+
+def find_csv_on_disk(search_dir: Path, csv_name: str, content: bytes) -> Path | None:
+    # The browser hides where an uploaded file came from; a file under
+    # search_dir with the same name and content is taken to be it, so the
+    # import command can name it and hledger finds its .latest dedup file
+    name = PurePath(csv_name).name
+    for path in sorted(search_dir.rglob(name)):
+        relative = path.relative_to(search_dir)
+        if any(p.startswith(".") for p in relative.parts) or not path.is_file():
+            continue
+        if path.stat().st_size == len(content) and path.read_bytes() == content:
+            return path
+    return None
+
+
+def import_command(ledger: Path | None, csv_file: Path | str, rules: Path) -> str:
+    # The hledger import command for this CSV and rules file, ready to paste
+    args = ["hledger"]
+    if ledger is not None:
+        args += ["-f", str(ledger)]
+    args += ["import", str(csv_file), "--rules", str(rules)]
+    return shlex.join(args)

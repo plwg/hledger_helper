@@ -146,7 +146,7 @@ def main(argv: list[str] | None = None) -> None:
         if not rules_dir.is_dir():
             sys.exit(f"Rules folder not found: {rules_dir}")
         try:
-            serve(rules_dir.resolve(), args.port)
+            serve(rules_dir.resolve(), args.port, ledger_path)
         except OSError as error:
             sys.exit(f"Cannot start the server on port {args.port}: {error}")
         return
