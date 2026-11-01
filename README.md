@@ -1,82 +1,35 @@
-# hledger Helper (hhelper) - A Command-Line Tool for Managing hledger Files
+# hledger Helper (hhelper)
 
-[Github](https://github.com/plwg/hledger_helper)
+A terminal menu for routine chores on [hledger](https://hledger.org/) journals.
 
-Welcome to **hledger Helper (hhelper)**, a command-line tool for simplifying and enhancing your experience with [hledger](https://hledger.org/), the plain-text accounting tool. Whether you're managing transactions, cleaning up your journal, fetching commodity prices, or generating recurring transactions, **hhelper** is here to make your life easier.
+- **Mark Transactions as Cleared**: step through uncleared transactions, optionally filtered by regex, and clear them one keypress at a time.
+- **Clean Up Journal**: rewrite the journal through `hledger print`, sorted and aligned, after checking the result reads the same as before.
+- **Fetch Prices**: download daily prices from Yahoo Finance and merge them into your price file.
+- **Generate Recurring Transactions**: preview the transactions your periodic rules produce for a period, then append them to the journal.
 
-## 🌟 Features
+## Install
 
-**hledger Helper** comes packed with powerful features to streamline your accounting workflow:
-
-1. **Mark Transactions as Cleared**
-   Easily mark transactions as cleared directly from the command line. No more manual editing of your ledger files!
-
-2. **Clean Up Journal**
-   Automatically clean and format your hledger journal file. This includes aligning amounts, removing unnecessary spaces, and ensuring your journal is valid.
-
-3. **Fetch Prices**
-   Fetch historical commodity prices using Yahoo Finance and append them to your price file. Perfect for keeping your commodity valuations up to date.
-
-4. **Generate Recurring Transactions**
-   Automatically generate recurring transactions based on your predefined rules. Save time by automating repetitive entries.
-
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Python 3.11 or higher
-- [hledger](https://hledger.org/) 1.52 or higher (CI tests 1.52.4 and the 2.0 pre-release 1.99.5)
-- A valid `config.toml` file in `~/.config/hhelper/` (see [example config](https://github.com/plwg/hledger_helper))
-
-### Installation
+Requires Python 3.11+ and hledger 1.52+ (CI tests 1.52.4 and the 2.0 pre-release 1.99.5).
 
 ```bash
-# install uv (package manager):
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# restart your terminal, or run the following command:
-source $HOME/.local/bin/env # or follow instructions
-
-# install hhelper through uv
 uv tool install hhelper
-
-# Run the tool
 hh
 ```
 
-## Screenshots
+No uv yet? `curl -LsSf https://astral.sh/uv/install.sh | sh`
 
-![Main menu](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/main/screenshots/main.png?raw=true)
-![Clean up journal](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/main/screenshots/clean.png?raw=true)
-![Clearing transaction](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/main/screenshots/clear.png?raw=true)
-![Fetching prices](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/main/screenshots/fetch.png?raw=true)
-![Generating recurring transaction](https://raw.githubusercontent.com/plwg/hledger_helper/refs/heads/main/screenshots/gen_recur.png?raw=true)
----
+## Usage
 
-## 🛠️ Usage
+| Command | Does |
+|---|---|
+| `hh` | Open the menu |
+| `hh --similar` | List descriptions and accounts that look like variants of each other (e.g. `Whole Foods` / `Whole Food`) and how to fix them; changes nothing |
+| `hh --config` | Print the config file's location and content |
+| `hh --version` | Print the version |
 
-Once you've launched **hhelper**, you'll be greeted with a user-friendly menu where you can select from the available options:
+## Configuration
 
-1. **Mark Transactions as Cleared**
-   Navigate through your uncleared transactions and mark them as cleared with a single keypress.
-
-2. **Clean Up Journal**
-   Automatically clean and format your journal file. The tool will ensure your journal is valid before making any changes.
-
-3. **Fetch Prices**
-   Fetch historical prices for your commodities and append them to your price file. You can review the fetched prices before saving.
-
-4. **Generate Recurring Transactions**
-   Generate recurring transactions based on a period expression. Preview the transactions before appending them to your journal.
-
-
-### Finding similar names
-
-`hh --similar` lists descriptions and accounts that look like variants of each other, such as `Whole Foods` and `Whole Food`, and explains how to fix them. It changes nothing.
-
-## ⚙️ Configuration
-
-**hhelper** requires a `config.toml` file located at `~/.config/hhelper/config.toml`. This file should define the paths to your ledger, price, header, and recurring transaction files. `hh --config` prints where it is and what it contains. Here's an example configuration:
+`~/.config/hhelper/config.toml`:
 
 ```toml
 [paths]
@@ -93,34 +46,20 @@ commodity_pairs = [
 ]
 ```
 
+Clean Up Journal drops directives and comments, so keep them in the header file, which the cleaned journal includes.
 
-### Backups
+## Backups
 
-Before changing a file, **hhelper** saves a timestamped copy in a `.hhelper/backups` folder in your configured `directory`, keeping the 10 most recent copies of each file. Each save first writes the new content to `.hhelper/tmp`; if the save is interrupted, that copy is kept and its path is shown. If your journal directory is a git repository, add `.hhelper/` to its `.gitignore`.
+Before changing a file, hhelper copies it to `.hhelper/backups/` in your `directory`, keeping the 10 most recent copies per file. Add `.hhelper/` to `.gitignore` if your journal is in git.
 
-
-## 🧪 Development
+## Development
 
 ```bash
 uv run pytest
 ```
 
-The tests run without a terminal or network: prompts and Yahoo Finance are replaced with test doubles. Tests that need hledger are skipped when it is not installed.
+Tests need no terminal or network; those needing hledger are skipped if it is not installed.
 
+## License
 
-## 📜 License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-
-## 🙌 Contributing
-
-Contributions are welcomed! If you have ideas for new features, improvements, or bug fixes, please open an issue or submit a pull request. Let's make **hhelper** even better together!
-
-
-## 💬 Feedback
-
-If you have any questions, suggestions, or just want to say hello, feel free to open an issue or reach out to us. We'd love to hear from you!
-
----
-Happy accounting with **hledger Helper**! 🎉
+MIT, see [LICENSE](LICENSE). Issues and pull requests welcome.
