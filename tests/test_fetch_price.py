@@ -103,7 +103,7 @@ def test_nothing_fetched_leaves_the_file_unchanged(
     prices.write_text("P 2024-03-01 ETH USD 3000.0\n")
     answers("y")
 
-    assert fetch_price(prices, [ETH], term) == STATUS.WAIT
+    assert fetch_price(prices, [ETH], term) == STATUS.FAILED
     assert prices.read_text() == "P 2024-03-01 ETH USD 3000.0\n"
 
 
