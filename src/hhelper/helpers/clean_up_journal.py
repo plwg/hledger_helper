@@ -83,7 +83,10 @@ def clean_up_journal(
     backup_ledger_path: Path,
     term: Terminal,
     header_include: str | None = None,
+    *,
+    confirm: bool = True,
 ) -> STATUS:
+    # With confirm=False (hh --clean-up) the warning and prompt are skipped
     # header_include is the header's path for the include line, as written in
     # the config (e.g. ~/finance/my.ledger.header); hledger resolves it
     # The header is the only way directives and comments survive clean-up, so
@@ -106,8 +109,87 @@ def clean_up_journal(
             ),
         ):
             print(term.bold_red(msg))
-        return STATUS.WAIT
+        return STATUS.FAILED
 
+    if confirm and not _confirm_clean_up(backup_ledger_path, term):
+        return STATUS.NOWAIT
+
+    # Generate the ledger content
+    print_result = subprocess.run(
+        ["hledger", "print", "-x", "-f", str(ledger_path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    # On failure stdout is empty; writing it back would leave only the header
+    if print_result.returncode != 0:
+        print(print_result.stderr)
+        print(term.bold_red(f"hledger print failed, {ledger_path} is left unchanged"))
+        return STATUS.FAILED
+
+    sorted_ledger = print_result.stdout
+
+    # NOTE: There is no need to account for header here since it is not in the hledger print's output
+    sorted_ledger = align_amounts(sorted_ledger)
+
+    with header_path.open() as header_file:
+        header_content = header_file.read()
+
+    start = header_start(
+        header_path,
+        header_include if header_include is not None else str(header_path),
+        header_content,
+        ledger_path.read_text(),
+        term,
+    )
+    sorted_ledger = f"{start}\n\n{sorted_ledger}"
+
+    returncode, cleaned_print, err = run_hledger_on_text(
+        ("print", "-x"), sorted_ledger, ledger_path
+    )
+
+    if returncode != 0:
+        print(err)
+        print(
+            term.bold_red(
+                f"Cleaned journal is invalid, {ledger_path} is left unchanged"
+            )
+        )
+        return STATUS.FAILED
+
+    # The cleaned journal must read exactly like the current one. It would not
+    # if the header includes a file with transactions (counted twice) or has an
+    # alias (applied twice)
+    if cleaned_print != print_result.stdout:
+        diff = difflib.unified_diff(
+            print_result.stdout.splitlines(keepends=True),
+            cleaned_print.splitlines(keepends=True),
+            "current journal",
+            "cleaned journal",
+            n=1,
+        )
+        print("".join(list(diff)[:30]))
+        print(
+            term.bold_red(
+                "The cleaned journal would read differently from the current one,"
+                " usually because the header file includes a file with transactions"
+                " or has an alias directive."
+                f" {ledger_path} is left unchanged"
+            )
+        )
+        return STATUS.FAILED
+
+    # Write the sorted ledger to the file
+    safe_write(ledger_path, sorted_ledger)
+
+    print(term.bold_white(f"Write sorted ledger to {ledger_path}"))
+
+    return STATUS.WAIT
+
+
+def _confirm_clean_up(backup_ledger_path: Path, term: Terminal) -> bool:
+    # Shows what clean-up changes and asks to go ahead
     with term.hidden_cursor():
         warning_message = (
             "Relying on hledger print, cleaning up has the following behaviors:",
@@ -140,79 +222,7 @@ def clean_up_journal(
         print(move_y(term, term.height))
 
         if not ask_yes_no(term, "Continue? (Y/n/q): ", default=True):
-            return STATUS.NOWAIT
+            return False
 
     print(term.clear + move_y(term, term.height))
-
-    # Generate the ledger content
-    print_result = subprocess.run(
-        ["hledger", "print", "-x", "-f", str(ledger_path)],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    # On failure stdout is empty; writing it back would leave only the header
-    if print_result.returncode != 0:
-        print(print_result.stderr)
-        print(term.bold_red(f"hledger print failed, {ledger_path} is left unchanged"))
-        return STATUS.WAIT
-
-    sorted_ledger = print_result.stdout
-
-    # NOTE: There is no need to account for header here since it is not in the hledger print's output
-    sorted_ledger = align_amounts(sorted_ledger)
-
-    with header_path.open() as header_file:
-        header_content = header_file.read()
-
-    start = header_start(
-        header_path,
-        header_include if header_include is not None else str(header_path),
-        header_content,
-        ledger_path.read_text(),
-        term,
-    )
-    sorted_ledger = f"{start}\n\n{sorted_ledger}"
-
-    returncode, cleaned_print, err = run_hledger_on_text(
-        ("print", "-x"), sorted_ledger, ledger_path
-    )
-
-    if returncode != 0:
-        print(err)
-        print(
-            term.bold_red(
-                f"Cleaned journal is invalid, {ledger_path} is left unchanged"
-            )
-        )
-        return STATUS.WAIT
-
-    # The cleaned journal must read exactly like the current one. It would not
-    # if the header includes a file with transactions (counted twice) or has an
-    # alias (applied twice)
-    if cleaned_print != print_result.stdout:
-        diff = difflib.unified_diff(
-            print_result.stdout.splitlines(keepends=True),
-            cleaned_print.splitlines(keepends=True),
-            "current journal",
-            "cleaned journal",
-            n=1,
-        )
-        print("".join(list(diff)[:30]))
-        print(
-            term.bold_red(
-                "The cleaned journal would read differently from the current one,"
-                " usually because the header file includes a file with transactions"
-                " or has an alias directive."
-                f" {ledger_path} is left unchanged"
-            )
-        )
-        return STATUS.WAIT
-
-    # Write the sorted ledger to the file
-    safe_write(ledger_path, sorted_ledger)
-
-    print(term.bold_white(f"Write sorted ledger to {ledger_path}"))
-
-    return STATUS.WAIT
+    return True

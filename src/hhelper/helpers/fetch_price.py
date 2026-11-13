@@ -88,7 +88,10 @@ def fetch_price(
     price_file_path: Path,
     commodity_pairs: list[CommodityPairConfig],
     term: Terminal,
+    *,
+    confirm: bool = True,
 ) -> STATUS:
+    # With confirm=False (hh --fetch-prices) the prices are written without asking
     if price_file_path.is_file():
         with price_file_path.open() as file_object:
             lines = file_object.readlines()
@@ -147,11 +150,12 @@ def fetch_price(
         print(
             f"No prices fetched since {start_date_str}, {price_file_path} is left unchanged"
         )
-        return STATUS.WAIT
+        return STATUS.FAILED
 
     latest_dp_date = max(dp_dates)
 
-    print(term.clear + term.home)
+    if confirm:
+        print(term.clear + term.home)
     print("".join(daily_price))
     print(
         f"Fetched {len(daily_price)} postings from {start_date_str} to {latest_dp_date}"
@@ -165,7 +169,7 @@ def fetch_price(
             )
         )
 
-    if not ask_yes_no(term, "Write to file? (Y/n/q): ", default=True):
+    if confirm and not ask_yes_no(term, "Write to file? (Y/n/q): ", default=True):
         return STATUS.NOWAIT
 
     # Lines without a date (comments, directives) are kept at the top, in order
