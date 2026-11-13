@@ -1,7 +1,9 @@
 import argparse
+import os
 import sys
 import tomllib
 from collections.abc import Callable
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import cast
 
@@ -43,11 +45,42 @@ def print_similar_report(ledger_path: Path) -> None:
         sys.exit(f"hledger cannot read {ledger_path}")
 
 
+def installed_version() -> str:
+    # The installed package's version, which may differ from the source tree
+    try:
+        return version("hhelper")
+    except PackageNotFoundError:
+        return "unknown (not installed)"
+
+
+def print_config(config_path: Path) -> None:
+    # The location, then the file as written; works even if it does not parse
+    print(f"Config file: {config_path}")
+
+    if not config_path.is_file():
+        sys.exit(
+            "It does not exist yet. You can find an example config file at"
+            " https://github.com/plwg/hledger_helper"
+        )
+
+    print()
+    print(config_path.read_text(), end="")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="hh", description="Helper functions for hledger plain text accounting."
     )
     parser.add_argument(
+        "--version", action="version", version=f"hh {installed_version()}"
+    )
+    actions = parser.add_mutually_exclusive_group()
+    actions.add_argument(
+        "--config",
+        action="store_true",
+        help="print the config file's location and content, then exit",
+    )
+    actions.add_argument(
         "--similar",
         action="store_true",
         help="list descriptions and accounts that look like variants of each"
@@ -56,6 +89,10 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     config_path = Path().home() / ".config" / "hhelper" / "config.toml"
+
+    if args.config:
+        print_config(config_path)
+        return
 
     try:
         with config_path.open("rb") as config_file:
@@ -78,6 +115,12 @@ def main(argv: list[str] | None = None) -> None:
     price_path = directory / paths["price_file"]
     # Optional here; Clean Up Journal explains what to do when it is missing
     header_path = directory / paths["header_file"] if "header_file" in paths else None
+    # As written in the config, unexpanded, for the ledger's include line
+    header_include = (
+        os.path.join(paths["directory"], paths["header_file"])
+        if "header_file" in paths
+        else None
+    )
     recurring_tx_path = directory / paths["recurring_tx_file"]
 
     if args.similar:
@@ -122,7 +165,9 @@ def main(argv: list[str] | None = None) -> None:
                 back_up_path = backup_file(ledger_path)
                 if header_path is not None and header_path.is_file():
                     backup_file(header_path)
-                status = helper(ledger_path, header_path, back_up_path, term)
+                status = helper(
+                    ledger_path, header_path, back_up_path, term, header_include
+                )
 
         elif name == AvailableHelpers.GEN_RECUR:
             if report_missing(term, ledger_path, recurring_tx_path):

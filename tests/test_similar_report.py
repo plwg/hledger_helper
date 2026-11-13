@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from collections import Counter
-from typing import TYPE_CHECKING
-
 import shutil
 import subprocess
+from collections import Counter
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -13,8 +12,8 @@ from hhelper.helpers.similar_report import (
     HledgerError,
     account_counts,
     accounts_under,
-    how_to,
     description_counts,
+    how_to,
     similar_accounts,
     similar_report,
 )
@@ -180,7 +179,8 @@ def test_hh_similar_with_a_missing_ledger(ledger: Path) -> None:
 
 @requires_hledger
 @pytest.mark.skipif(
-    subprocess.run(["sed", "--version"], capture_output=True).returncode != 0,
+    subprocess.run(["sed", "--version"], capture_output=True, check=False).returncode
+    != 0,
     reason="needs GNU sed",
 )
 def test_the_suggested_sed_commands_work(ledger: Path) -> None:
@@ -207,7 +207,8 @@ def test_the_suggested_sed_commands_work(ledger: Path) -> None:
     assert "'whole foods'" not in report
     assert (
         subprocess.run(
-            [shutil.which("hledger") or "hledger", "check", "-f", str(ledger)]
+            [shutil.which("hledger") or "hledger", "check", "-f", str(ledger)],
+            check=False,
         ).returncode
         == 0
     )
