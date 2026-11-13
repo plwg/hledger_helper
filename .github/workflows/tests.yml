@@ -39,6 +39,20 @@ jobs:
           UV_PYTHON_PREFERENCE: managed
         run: uv run --python ${{ matrix.python }} pytest
 
+  # The single check that branch rules require for the test matrix, so that
+  # renaming or adding matrix jobs does not leave the rules waiting on old names.
+  tests-passed:
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check every test job passed
+        run: |
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "Test matrix result: ${{ needs.test.result }}" >&2
+            exit 1
+          fi
+
   lint:
     runs-on: ubuntu-latest
     steps:
