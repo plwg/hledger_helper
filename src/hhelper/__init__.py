@@ -1,5 +1,7 @@
 import argparse
+import datetime
 import os
+import re
 import sys
 import tomllib
 from collections.abc import Callable
@@ -11,6 +13,7 @@ from blessed import Terminal
 
 from hhelper.helpers.backup import backup_file
 from hhelper.helpers.clean_up_journal import clean_up_journal
+from hhelper.helpers.clear_tx import clear_tx_until
 from hhelper.helpers.fetch_price import CommodityPairConfig, fetch_price
 from hhelper.helpers.options import (
     AvailableHelpers,
@@ -75,6 +78,24 @@ def run_clean_up(
         header_include,
         confirm=confirm,
     )
+
+
+def run_clear(
+    ledger_path: Path, account: str, until: datetime.date, term: Terminal
+) -> STATUS:
+    if report_missing(term, ledger_path):
+        return STATUS.FAILED
+
+    backup_file(ledger_path)
+    return clear_tx_until(ledger_path, account, until, term)
+
+
+def parse_date(text: str) -> datetime.date:
+    # Only YYYY-MM-DD; fromisoformat alone also accepts e.g. 20240131
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        msg = f"expected a date as YYYY-MM-DD, got {text!r}"
+        raise ValueError(msg)
+    return datetime.date.fromisoformat(text)
 
 
 def exit_with(status: STATUS) -> None:
@@ -145,7 +166,21 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="fetch prices and write them to the price file without asking, then exit",
     )
+    actions.add_argument(
+        "--clear",
+        nargs=2,
+        metavar=("ACCOUNT", "DATE"),
+        help="clear, without asking, every uncleared transaction dated up to DATE"
+        " (YYYY-MM-DD, inclusive) with a posting to exactly ACCOUNT, print them,"
+        " then exit",
+    )
     args = parser.parse_args(argv)
+
+    if args.clear:
+        try:
+            clear_until = parse_date(args.clear[1])
+        except ValueError as error:
+            parser.error(f"--clear: {error}")
 
     config_path = Path().home() / ".config" / "hhelper" / "config.toml"
 
@@ -192,6 +227,10 @@ def main(argv: list[str] | None = None) -> None:
         exit_with(
             run_clean_up(ledger_path, header_path, header_include, term, confirm=False)
         )
+        return
+
+    if args.clear:
+        exit_with(run_clear(ledger_path, args.clear[0], clear_until, term))
         return
 
     if args.fetch_prices:

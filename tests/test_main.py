@@ -162,6 +162,7 @@ def test_hh_config_without_a_config(
         ["--config", "--similar"],
         ["--clean-up", "--fetch-prices"],
         ["--similar", "--clean-up"],
+        ["--clear", "assets:bank", "2024-01-01", "--clean-up"],
     ],
 )
 def test_command_line_actions_cannot_be_combined(flags: list[str]) -> None:
@@ -279,3 +280,39 @@ def test_clean_up_includes_the_header_as_written_in_the_config(
         hhelper.main([])
 
     assert ledger.read_text().startswith("include ~/finance/my.ledger.header\n")
+
+
+@pytest.mark.skipif(shutil.which("hledger") is None, reason="hledger is not installed")
+def test_hh_clear_clears_without_asking(
+    run_main, capsys: pytest.CaptureFixture
+) -> None:
+    ledger = run_main.journal_dir / "my.ledger"
+    ledger.write_text("2024-01-01 a\n    expenses:x  1 USD\n    assets:bank\n")
+    # Any prompt would raise EOFError
+    run_main.answers()
+
+    hhelper.main(["--clear", "assets:bank", "2024-01-01"])
+
+    assert ledger.read_text().startswith("2024-01-01 * a\n")
+    assert "Cleared 1 transactions" in capsys.readouterr().out
+    assert any((run_main.journal_dir / ".hhelper" / "backups").iterdir())
+
+
+def test_hh_clear_exits_non_zero_when_the_ledger_is_missing(run_main) -> None:
+    run_main.answers()
+
+    with pytest.raises(SystemExit) as exit_info:
+        hhelper.main(["--clear", "assets:bank", "2024-01-01"])
+
+    assert exit_info.value.code == 1
+
+
+@pytest.mark.parametrize("date", ["2024-1-5", "20240105", "2024/01/05", "2024-02-30"])
+def test_hh_clear_accepts_only_yyyy_mm_dd(
+    run_main, capsys: pytest.CaptureFixture, date: str
+) -> None:
+    with pytest.raises(SystemExit) as exit_info:
+        hhelper.main(["--clear", "assets:bank", date])
+
+    assert exit_info.value.code == 2
+    assert "--clear:" in capsys.readouterr().err

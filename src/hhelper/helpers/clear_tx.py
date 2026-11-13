@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import datetime
+import json
 import re
+import subprocess
 import sys
 from collections import OrderedDict
 from enum import Enum, auto
 from functools import cache
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from hhelper.helpers.check_valid_journal import check_valid_journal
@@ -14,8 +17,6 @@ from hhelper.helpers.safe_write import safe_write
 from hhelper.ui.display import clear_screen_move_to_bottom, press_key_to_continue
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from blessed import Terminal
 
 
@@ -31,6 +32,8 @@ _CLEARED_HEADER_PATS = (
     re.compile(r"((?P<year>\d{4})/)?(?P<month>\d{1,2})/(?P<day>\d{1,2}) \* "),
 )
 _POSTING_PAT = re.compile(r"\s+\w+")
+# Only dash dates are supported; others are refused by refuse_non_dash_dates
+_UNCLEAR_QUERY_PAT = re.compile(r"^((\d{4}-)?\d{1,2}-\d{1,2} )(! )?")
 
 
 class LineType(Enum):
@@ -226,9 +229,146 @@ def print_help_string() -> None:
     )
 
 
+def refuse_non_dash_dates(lines: list[str], ledger_path: Path, term: Terminal) -> bool:
+    # Returns whether any transaction date uses '/' or '.', after naming the lines
+    non_dash_lines = [
+        str(line_number)
+        for line_number, line in enumerate(lines, start=1)
+        if is_transaction_header(line) and not _HEADER_PATS[0].match(line)
+    ]
+
+    if non_dash_lines:
+        print(
+            term.bold_red(
+                "Transaction dates must use '-' (e.g. 2024-01-31), but these lines"
+                f" use '/' or '.': {', '.join(non_dash_lines[:20])}"
+                f"{' ...' if len(non_dash_lines) > 20 else ''}."
+                " Clean Up Journal rewrites dates with '-'."
+                f" {ledger_path} is left unchanged"
+            )
+        )
+
+    return bool(non_dash_lines)
+
+
+def mark_cleared(
+    line_dict: dict[int, str], uncleared_tx: dict[int, list[LineType]], head: int
+) -> None:
+    # Marks the transaction starting at line head as cleared, dropping the
+    # generated-transaction comment that hledger print --forecast adds
+    line_dict[head] = _UNCLEAR_QUERY_PAT.sub(r"\1* ", line_dict[head])
+
+    if (
+        len(uncleared_tx[head]) > 1
+        and uncleared_tx[head][1] == LineType.GENERATED_COMMENTS
+    ):
+        line_dict.pop(head + 1)
+
+
+def _uncleared_heads(
+    ledger_path: Path, account: str, until: datetime.date, term: Terminal
+) -> list[int] | None:
+    # The header line numbers of the ledger's own uncleared transactions dated
+    # until (inclusive) with a posting to exactly account, as hledger reads
+    # them (so year-less dates, Y and alias directives apply). None on failure
+    result = subprocess.run(
+        ["hledger", "print", "-O", "json", "-f", str(ledger_path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        print(result.stderr)
+        print(term.bold_red(f"hledger cannot read {ledger_path}"))
+        return None
+
+    transactions = json.loads(result.stdout)
+    own_file = ledger_path.resolve()
+
+    if not any(
+        posting["paccount"] == account
+        for tx in transactions
+        for posting in tx["tpostings"]
+    ):
+        print(term.bold_red(f"No posting uses the account {account}"))
+        return None
+
+    heads = []
+    elsewhere = 0
+
+    for tx in transactions:
+        if (
+            tx["tstatus"] == "Cleared"
+            or datetime.date.fromisoformat(tx["tdate"]) > until
+            or all(posting["paccount"] != account for posting in tx["tpostings"])
+        ):
+            continue
+
+        source = tx["tsourcepos"][0]
+        if Path(source["sourceName"]).resolve() == own_file:
+            heads.append(source["sourceLine"])
+        else:
+            elsewhere += 1
+
+    if elsewhere:
+        print(
+            term.yellow(
+                f"{elsewhere} matching transactions are in included files;"
+                " they are left unchanged"
+            )
+        )
+
+    return sorted(heads)
+
+
+def clear_tx_until(
+    ledger_path: Path, account: str, until: datetime.date, term: Terminal
+) -> STATUS:
+    # Clears, without asking, every uncleared transaction dated until
+    # (inclusive) with a posting to exactly account, and prints each one
+    lines = ledger_path.read_text().splitlines(keepends=True)
+
+    if refuse_non_dash_dates(lines, ledger_path, term):
+        return STATUS.FAILED
+
+    heads = _uncleared_heads(ledger_path, account, until, term)
+    if heads is None:
+        return STATUS.FAILED
+
+    line_dict = OrderedDict(enumerate(lines, start=1))
+    uncleared_tx, _, _ = update_line_status(line_dict, 1)
+
+    cleared = []
+    for head in heads:
+        if head not in uncleared_tx:
+            # hledger and the line parser disagree; leave it rather than guess
+            print(term.yellow(f"Line {head} is not an uncleared transaction, skipped"))
+            continue
+
+        mark_cleared(line_dict, uncleared_tx, head)
+        cleared.append(
+            "".join(
+                line_dict[n]
+                for n in range(head, head + len(uncleared_tx[head]))
+                if n in line_dict
+            )
+        )
+
+    if not cleared:
+        print(f"No uncleared transactions for {account} up to {until}")
+        return STATUS.WAIT
+
+    safe_write(ledger_path, "".join(line_dict.values()))
+
+    for text in cleared:
+        print(text)
+    print(f"Cleared {len(cleared)} transactions for {account} up to {until}")
+
+    return STATUS.WAIT
+
+
 def clear_tx(ledger_path: Path, term: Terminal) -> STATUS:
-    # Only dash dates are supported; others are refused below
-    unclear_query_pattern = re.compile(r"^((\d{4}-)?\d{1,2}-\d{1,2} )(! )?")
     starting_line = 1
 
     while True:
@@ -239,22 +379,7 @@ def clear_tx(ledger_path: Path, term: Terminal) -> STATUS:
             print(term.bold_red(f"{ledger_path} is not a valid journal"))
             return STATUS.WAIT
 
-        non_dash_lines = [
-            str(line_number)
-            for line_number, line in enumerate(lines, start=1)
-            if is_transaction_header(line) and not _HEADER_PATS[0].match(line)
-        ]
-
-        if non_dash_lines:
-            print(
-                term.bold_red(
-                    "Transaction dates must use '-' (e.g. 2024-01-31), but these lines"
-                    f" use '/' or '.': {', '.join(non_dash_lines[:20])}"
-                    f"{' ...' if len(non_dash_lines) > 20 else ''}."
-                    " Clean Up Journal rewrites dates with '-'."
-                    f" {ledger_path} is left unchanged"
-                )
-            )
+        if refuse_non_dash_dates(lines, ledger_path, term):
             return STATUS.WAIT
 
         line_dict = OrderedDict(
@@ -356,13 +481,7 @@ def clear_tx(ledger_path: Path, term: Terminal) -> STATUS:
                     if decision == TxDecisionType.YES_CLEAR_ALL:
                         clear_all_flag = True
 
-                    line_dict[k] = unclear_query_pattern.sub(r"\1* ", line_dict[k])
-
-                    if (
-                        len(uncleared_tx[k]) > 1
-                        and uncleared_tx[k][1] == LineType.GENERATED_COMMENTS
-                    ):
-                        line_dict.pop(k + 1)
+                    mark_cleared(line_dict, uncleared_tx, k)
 
                     if clear_all_flag:
                         # Rewriting the whole file per transaction is O(n^2) when clearing
