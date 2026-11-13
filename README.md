@@ -24,6 +24,9 @@ No uv yet? `curl -LsSf https://astral.sh/uv/install.sh | sh`
 |---|---|
 | `hh` | Open the menu |
 | `hh --similar` | List descriptions and accounts that look like variants of each other (e.g. `Whole Foods` / `Whole Food`) and how to fix them; changes nothing |
+| `hh --clean-up` | Clean up the journal without asking; exits 1 if nothing was written |
+| `hh --fetch-prices` | Fetch prices and write them without asking; exits 1 if none were fetched |
+| `hh --clear ACCOUNT DATE` | Clear, without asking, uncleared transactions up to `DATE` (`YYYY-MM-DD`, inclusive) that post to exactly `ACCOUNT`, and print them |
 | `hh --config` | Print the config file's location and content |
 | `hh --version` | Print the version |
 

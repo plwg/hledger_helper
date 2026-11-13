@@ -1,5 +1,7 @@
 import argparse
+import datetime
 import os
+import re
 import sys
 import tomllib
 from collections.abc import Callable
@@ -10,6 +12,9 @@ from typing import cast
 from blessed import Terminal
 
 from hhelper.helpers.backup import backup_file
+from hhelper.helpers.clean_up_journal import clean_up_journal
+from hhelper.helpers.clear_tx import clear_tx_until
+from hhelper.helpers.fetch_price import CommodityPairConfig, fetch_price
 from hhelper.helpers.options import (
     AvailableHelpers,
     get_main_menu_options,
@@ -32,6 +37,71 @@ def report_missing(term: Terminal, *paths: Path) -> bool:
         print("Create it, or check the paths in ~/.config/hhelper/config.toml.")
 
     return bool(missing)
+
+
+def run_fetch_prices(
+    price_path: Path,
+    commodity_pairs: list[CommodityPairConfig],
+    term: Terminal,
+    *,
+    confirm: bool = True,
+) -> STATUS:
+    # A missing price file is created; only its directory must exist
+    if not price_path.parent.is_dir():
+        print(term.bold_red(f"Directory not found: {price_path.parent}"))
+        return STATUS.FAILED
+
+    if price_path.is_file():
+        backup_file(price_path)
+    return fetch_price(price_path, commodity_pairs, term, confirm=confirm)
+
+
+def run_clean_up(
+    ledger_path: Path,
+    header_path: Path | None,
+    header_include: str | None,
+    term: Terminal,
+    *,
+    confirm: bool = True,
+) -> STATUS:
+    if report_missing(term, ledger_path):
+        return STATUS.FAILED
+
+    back_up_path = Path(backup_file(ledger_path))
+    if header_path is not None and header_path.is_file():
+        backup_file(header_path)
+    return clean_up_journal(
+        ledger_path,
+        header_path,
+        back_up_path,
+        term,
+        header_include,
+        confirm=confirm,
+    )
+
+
+def run_clear(
+    ledger_path: Path, account: str, until: datetime.date, term: Terminal
+) -> STATUS:
+    if report_missing(term, ledger_path):
+        return STATUS.FAILED
+
+    backup_file(ledger_path)
+    return clear_tx_until(ledger_path, account, until, term)
+
+
+def parse_date(text: str) -> datetime.date:
+    # Only YYYY-MM-DD; fromisoformat alone also accepts e.g. 20240131
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        msg = f"expected a date as YYYY-MM-DD, got {text!r}"
+        raise ValueError(msg)
+    return datetime.date.fromisoformat(text)
+
+
+def exit_with(status: STATUS) -> None:
+    # For the command-line actions: a failure exits non-zero
+    if status == STATUS.FAILED:
+        sys.exit(1)
 
 
 def print_similar_report(ledger_path: Path) -> None:
@@ -69,7 +139,9 @@ def print_config(config_path: Path) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        prog="hh", description="Helper functions for hledger plain text accounting."
+        prog="hh",
+        description="Helper functions for hledger plain text accounting."
+        " Run without options for the TUI; run with an option for the CLI.",
     )
     parser.add_argument(
         "--version", action="version", version=f"hh {installed_version()}"
@@ -86,7 +158,31 @@ def main(argv: list[str] | None = None) -> None:
         help="list descriptions and accounts that look like variants of each"
         " other, then exit; nothing is changed",
     )
+    actions.add_argument(
+        "--clean-up",
+        action="store_true",
+        help="clean up the journal without asking, then exit",
+    )
+    actions.add_argument(
+        "--fetch-prices",
+        action="store_true",
+        help="fetch prices and write them to the price file without asking, then exit",
+    )
+    actions.add_argument(
+        "--clear",
+        nargs=2,
+        metavar=("ACCOUNT", "DATE"),
+        help="clear, without asking, every uncleared transaction dated up to DATE"
+        " (YYYY-MM-DD, inclusive) with a posting to exactly ACCOUNT, print them,"
+        " then exit",
+    )
     args = parser.parse_args(argv)
+
+    if args.clear:
+        try:
+            clear_until = parse_date(args.clear[1])
+        except ValueError as error:
+            parser.error(f"--clear: {error}")
 
     config_path = Path().home() / ".config" / "hhelper" / "config.toml"
 
@@ -129,6 +225,27 @@ def main(argv: list[str] | None = None) -> None:
 
     term = Terminal()
 
+    if args.clean_up:
+        exit_with(
+            run_clean_up(ledger_path, header_path, header_include, term, confirm=False)
+        )
+        return
+
+    if args.clear:
+        exit_with(run_clear(ledger_path, args.clear[0], clear_until, term))
+        return
+
+    if args.fetch_prices:
+        exit_with(
+            run_fetch_prices(
+                price_path,
+                config["commodities"]["commodity_pairs"],
+                term,
+                confirm=False,
+            )
+        )
+        return
+
     while True:
         selection = menu(get_main_menu_options(), term)
 
@@ -140,16 +257,9 @@ def main(argv: list[str] | None = None) -> None:
         print(move_y(term, term.height))
 
         if name == AvailableHelpers.FETCH_PRICE:
-            commodity_pairs = config["commodities"]["commodity_pairs"]
-
-            # A missing price file is created; only its directory must exist
-            if not price_path.parent.is_dir():
-                print(term.bold_red(f"Directory not found: {price_path.parent}"))
-                status = STATUS.WAIT
-            else:
-                if price_path.is_file():
-                    backup_file(price_path)
-                status = helper(price_path, commodity_pairs, term)
+            status = run_fetch_prices(
+                price_path, config["commodities"]["commodity_pairs"], term
+            )
 
         elif name == AvailableHelpers.MARK_CLEAR:
             if report_missing(term, ledger_path):
@@ -159,15 +269,7 @@ def main(argv: list[str] | None = None) -> None:
                 status = helper(ledger_path, term)
 
         elif name == AvailableHelpers.CLEAN_UP:
-            if report_missing(term, ledger_path):
-                status = STATUS.WAIT
-            else:
-                back_up_path = backup_file(ledger_path)
-                if header_path is not None and header_path.is_file():
-                    backup_file(header_path)
-                status = helper(
-                    ledger_path, header_path, back_up_path, term, header_include
-                )
+            status = run_clean_up(ledger_path, header_path, header_include, term)
 
         elif name == AvailableHelpers.GEN_RECUR:
             if report_missing(term, ledger_path, recurring_tx_path):
@@ -179,7 +281,7 @@ def main(argv: list[str] | None = None) -> None:
         else:
             raise NotImplementedError
 
-        if status == STATUS.WAIT:
+        if status in (STATUS.WAIT, STATUS.FAILED):
             press_key_to_continue(term)
 
         elif status == STATUS.NOWAIT:

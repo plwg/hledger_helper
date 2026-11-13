@@ -1,3 +1,4 @@
 from enum import Enum
 
-STATUS = Enum("STATUS", ["WAIT", "NOWAIT"])
+# FAILED means nothing was written; the menu waits for a key as with WAIT
+STATUS = Enum("STATUS", ["WAIT", "NOWAIT", "FAILED"])

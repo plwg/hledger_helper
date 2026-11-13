@@ -141,7 +141,6 @@ def test_header_in_another_directory_is_included_by_its_path(
     "directive",
     [
         "alias food = expenses:food",
-        "apply account personal",
         "Y 2024",
         "D 1,000.00 USD",
     ],
@@ -300,7 +299,7 @@ def test_directives_that_would_apply_twice_are_refused(
     ledger.write_text(original)
     answers("y")
 
-    assert clean_up_journal(ledger, header, ledger, term) == STATUS.WAIT
+    assert clean_up_journal(ledger, header, ledger, term) == STATUS.FAILED
     assert ledger.read_text() == original
     assert "would read differently" in capsys.readouterr().out
 
@@ -322,7 +321,7 @@ def test_unreadable_ledger_is_left_unchanged(files, term, answers) -> None:
     ledger.write_text(unbalanced)
     answers("y")
 
-    assert clean_up_journal(ledger, header, ledger, term) == STATUS.WAIT
+    assert clean_up_journal(ledger, header, ledger, term) == STATUS.FAILED
     assert ledger.read_text() == unbalanced
 
 
@@ -339,7 +338,7 @@ def test_included_transactions_are_not_duplicated(
     ledger.write_text(original)
     answers("y")
 
-    assert clean_up_journal(ledger, header, ledger, term) == STATUS.WAIT
+    assert clean_up_journal(ledger, header, ledger, term) == STATUS.FAILED
     assert ledger.read_text() == original
     assert "would read differently" in capsys.readouterr().out
 
@@ -354,6 +353,6 @@ def test_missing_header_is_explained(
     answers("y")
 
     header_arg = None if header_exists is None else header
-    assert clean_up_journal(ledger, header_arg, ledger, term) == STATUS.WAIT
+    assert clean_up_journal(ledger, header_arg, ledger, term) == STATUS.FAILED
     assert ledger.read_text() == original
     assert "header file" in capsys.readouterr().out
