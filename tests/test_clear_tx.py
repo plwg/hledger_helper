@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from typing import TYPE_CHECKING
 
 import pytest
@@ -7,6 +8,7 @@ import pytest
 from hhelper.helpers import clear_tx as clear_tx_module
 from hhelper.helpers.clear_tx import (
     clear_tx,
+    clear_tx_until,
     is_transaction_header,
     is_transaction_header_cleared,
 )
@@ -235,3 +237,145 @@ def test_relative_include_resolves_from_any_directory(
     clear_tx(ledger, term)
 
     assert "2024-01-01 * a" in ledger.read_text()
+
+
+UNTIL_JOURNAL = """\
+Y 2024
+
+2024-01-01 * already cleared
+    expenses:food  1.00 USD
+    assets:bank
+
+2024-01-02 groceries
+    expenses:food  2.00 USD
+    assets:bank
+
+01-03 ! pending, no year
+    expenses:rent  3.00 USD
+    assets:bank
+
+2024-01-04 subaccount only
+    expenses:food  4.00 USD
+    assets:bank:savings
+
+2024-01-05 parent only
+    expenses:food  5.00 USD
+    assets
+
+2024-01-06 after the date
+    expenses:food  6.00 USD
+    assets:bank
+"""
+
+
+@requires_hledger
+def test_clear_until_clears_exact_account_up_to_the_date(
+    tmp_path: Path, term, capsys: pytest.CaptureFixture
+) -> None:
+    ledger = tmp_path / "my.ledger"
+    ledger.write_text(UNTIL_JOURNAL)
+
+    status = clear_tx_until(ledger, "assets:bank", datetime.date(2024, 1, 5), term)
+
+    assert status == STATUS.WAIT
+    assert headers(ledger) == [
+        "2024-01-01 * already cleared",
+        "2024-01-02 * groceries",
+        "01-03 * pending, no year",
+        "2024-01-04 subaccount only",
+        "2024-01-05 parent only",
+        "2024-01-06 after the date",
+    ]
+    out = capsys.readouterr().out
+    assert (
+        "2024-01-02 * groceries\n    expenses:food  2.00 USD\n    assets:bank\n" in out
+    )
+    assert "01-03 * pending, no year" in out
+    assert "Cleared 2 transactions for assets:bank up to 2024-01-05" in out
+
+
+@requires_hledger
+def test_clear_until_includes_the_date(tmp_path: Path, term) -> None:
+    ledger = tmp_path / "my.ledger"
+    ledger.write_text(UNTIL_JOURNAL)
+
+    clear_tx_until(ledger, "assets:bank", datetime.date(2024, 1, 6), term)
+
+    assert "2024-01-06 * after the date" in headers(ledger)
+
+
+@requires_hledger
+def test_clear_until_with_nothing_to_clear_changes_nothing(
+    tmp_path: Path, term, capsys: pytest.CaptureFixture
+) -> None:
+    ledger = tmp_path / "my.ledger"
+    ledger.write_text(UNTIL_JOURNAL)
+
+    status = clear_tx_until(ledger, "assets:bank", datetime.date(2023, 12, 31), term)
+
+    assert status == STATUS.WAIT
+    assert ledger.read_text() == UNTIL_JOURNAL
+    assert "No uncleared transactions" in capsys.readouterr().out
+
+
+@requires_hledger
+def test_clear_until_unknown_account_fails(
+    tmp_path: Path, term, capsys: pytest.CaptureFixture
+) -> None:
+    ledger = tmp_path / "my.ledger"
+    ledger.write_text(UNTIL_JOURNAL)
+
+    status = clear_tx_until(ledger, "assets:ban", datetime.date(2024, 1, 5), term)
+
+    assert status == STATUS.FAILED
+    assert ledger.read_text() == UNTIL_JOURNAL
+    assert "No posting uses the account assets:ban" in capsys.readouterr().out
+
+
+@requires_hledger
+def test_clear_until_removes_generated_comment(tmp_path: Path, term) -> None:
+    ledger = tmp_path / "my.ledger"
+    ledger.write_text(
+        "2024-01-01 rent\n"
+        "    ; generated-transaction: ~ monthly\n"
+        "    expenses:rent  1.00 USD\n"
+        "    assets:bank\n"
+    )
+
+    clear_tx_until(ledger, "assets:bank", datetime.date(2024, 1, 1), term)
+
+    assert ledger.read_text() == (
+        "2024-01-01 * rent\n    expenses:rent  1.00 USD\n    assets:bank\n"
+    )
+
+
+@requires_hledger
+def test_clear_until_leaves_included_files_alone(
+    tmp_path: Path, term, capsys: pytest.CaptureFixture
+) -> None:
+    other = tmp_path / "other.journal"
+    other_text = "2024-01-01 included\n    expenses:x  1 USD\n    assets:bank\n"
+    other.write_text(other_text)
+    ledger = tmp_path / "my.ledger"
+    ledger.write_text(
+        "include other.journal\n\n"
+        "2024-01-02 own\n    expenses:x  2 USD\n    assets:bank\n"
+    )
+
+    clear_tx_until(ledger, "assets:bank", datetime.date(2024, 1, 2), term)
+
+    assert "2024-01-02 * own" in ledger.read_text()
+    assert other.read_text() == other_text
+    assert "1 matching transactions are in included files" in (capsys.readouterr().out)
+
+
+@requires_hledger
+def test_clear_until_invalid_journal_fails(tmp_path: Path, term) -> None:
+    ledger = tmp_path / "my.ledger"
+    unbalanced = "2024-01-01 a\n    x  1 USD\n    y  1 USD\n"
+    ledger.write_text(unbalanced)
+
+    status = clear_tx_until(ledger, "x", datetime.date(2024, 1, 1), term)
+
+    assert status == STATUS.FAILED
+    assert ledger.read_text() == unbalanced
