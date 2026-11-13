@@ -139,7 +139,9 @@ def print_config(config_path: Path) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        prog="hh", description="Helper functions for hledger plain text accounting."
+        prog="hh",
+        description="Helper functions for hledger plain text accounting."
+        " Run without options for the TUI; run with an option for the CLI.",
     )
     parser.add_argument(
         "--version", action="version", version=f"hh {installed_version()}"
